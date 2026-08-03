@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://scripts/ui/touch_controls.gd" type="Script" id=1]
+
+[node name="TouchControls" type="Control"]
+script = ExtResource( 1 )

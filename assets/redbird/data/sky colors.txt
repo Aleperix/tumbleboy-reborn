@@ -1,0 +1,4 @@
+dawn - R255	G244	B208
+day -  R156	G212	B255
+dusk - R255	G214	B104
+night -R33	G44	B92

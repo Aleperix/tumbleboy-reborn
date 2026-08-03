@@ -1,0 +1,33 @@
+Level Time (in seconds): 60
+Amount of fruit user can miss and still pass: 8
+  LEVEL DESIGN:
+@_______M____XXX
+____@@_______XXX
+____TT____R_____
+_@@_____________
+_TT______@@____@
+_________TT_____
+____________R@@_
+__R__________TT_
+_____TT___R_____
+____@_______@@__
+____TT______TT__
+___@@___@@______
+_R_TT___TT___@@M
+_____________TT_
+_@@______@@_____
+_TT______TT____S
+END LEVEL DESIGN
+
+File Information:
+grid must be 16x16
+
+@ = fruit
+TT = tree 
+_ and . = empty space
+S = Starting location
+R = Rock
+M = monkey 
+LLLL = log (4 spaces wide)
+
+X = reserved placement for truck

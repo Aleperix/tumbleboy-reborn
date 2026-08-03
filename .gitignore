@@ -1,0 +1,11 @@
+# Godot 3 — cachés generadas (se regeneran al abrir el proyecto)
+.godot/
+.import/
+*.import
+
+# Exports Android (binarios y secretos)
+/android/
+*.apk
+*.aab
+*.jks
+*.keystore

@@ -1,0 +1,24 @@
+.theme {beach}
+
+!!!
+%%%%%%%%%%%%%%%%%%%%%%%%%DD%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%DD%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%DDD%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%#####%%%%%%%%%%%%DDDD%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%#>-@<#%%%%%%%%%%%%%DDDD%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%##>--<#%%%%%%%%%%%%%DDDD%%%%-%%%%%%%%--%%%%%%%%%
+%%%%%%%%##>-<#%%%%%%%%%%%%%DDDD%%---%%--%%%%---%%%%%%%%
+%%%%%%#####@<#%%%%%%%%%%%%%DDDD%-----%---@%%%---%%%%%%%
+%%%%%%#W#-v-<####>-www-<##%DDDD-------------------%%DDD
+%%%%##------------------w#%DDDD-----@-------------%DDDD
+%%%%www-------^----------<WWWWW>--------------1---wwDDD
+w%%%ww-$-----<#>----^----##DDDD#-----------------wwwDDD
+ww%www--------v-----##--###DDDD##-------@-------wwwwDDD
+wwwww---------------######DDDDDD#----------------wwDDDD
+dddddddddddddddddddd##%##dDDDDDDddddddddddddddddddwDDDD
+DDDDDDDDDDDDDDDDDDDDd###dDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+DDDDDDDDDDDDDDDDDDDDDdddDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+!!!
