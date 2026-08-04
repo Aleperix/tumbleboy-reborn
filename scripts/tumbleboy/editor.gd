@@ -105,18 +105,23 @@ var fit_scale := 1.0
 func _ready():
 	board = BoardScript.new()
 	font_swatch = UIFonts.make_font(15)
-	_new_board()
 	_build_ui()
-	_render()
 	if NavParams.open_draft and SaveData.has_draft():
 		_load_draft(SaveData.get_draft())
 		NavParams.open_draft = false
 	elif NavParams.open_file != "":
-		call_deferred("open_file", NavParams.open_file)
+		var path := NavParams.open_file
 		NavParams.open_file = ""
-	if NavParams.open_pack_panel:
-		call_deferred("open_pack_panel")
+		_new_board()
+		call_deferred("open_file", path)
+	elif NavParams.open_pack_panel:
 		NavParams.open_pack_panel = false
+		_new_board()
+		call_deferred("open_pack_panel")
+	else:
+		SaveData.clear_draft()
+		_new_board()
+	_render()
 
 func _build_ui():
 	var top := ColorRect.new()
@@ -134,9 +139,9 @@ func _build_ui():
 	play_button = _make_tool_button("Probar", "_on_toggle_play", 90)
 	play_button.rect_position = Vector2(555, 8)
 
-	_make_tool_button("Crear pack", "_on_open_pack", 96).rect_position = Vector2(884, 8)
-	_make_tool_button("Exportar pack", "_on_open_export", 96).rect_position = Vector2(984, 8)
-	_make_tool_button("?", "_toggle_help", 34).rect_position = Vector2(1084, 8)
+	_make_tool_button("Crear pack", "_on_open_pack", 104).rect_position = Vector2(830, 8)
+	_make_tool_button("Exportar pack", "_on_open_export", 124).rect_position = Vector2(938, 8)
+	_make_tool_button("?", "_toggle_help", 34).rect_position = Vector2(1076, 8)
 	_make_tool_button("Salir", "_on_exit", 70).rect_position = Vector2(1122, 8)
 
 	name_edit = LineEdit.new()
@@ -624,10 +629,12 @@ func _on_field_changed(_text: String):
 
 func _on_theme_selected(idx: int):
 	attributes["theme"] = THEMES[idx]
+	_mark_draft_dirty()
 	_render()
 
 func _on_boy_selected(idx: int):
 	attributes["boy"] = BOYS[idx]
+	_mark_draft_dirty()
 
 func _on_palette_pressed(btn: Button, block: int):
 	_select_paint(block)
@@ -778,6 +785,10 @@ func _on_save():
 	if read_only:
 		_set_status("Nivel de solo lectura: usa 'Guardar como' para copiarlo a tus niveles")
 		return
+	var fmsg := _validate_fields()
+	if fmsg != "":
+		_set_status("No guardado: " + fmsg)
+		return
 	var msg := _validate_map()
 	if msg != "":
 		_set_status("No guardado: " + msg)
@@ -813,6 +824,16 @@ func _validate_map() -> String:
 		return "falta el bloque Meta (1)"
 	return ""
 
+func _validate_fields() -> String:
+	_collect_fields_to_attributes()
+	if attributes.get("name", "").strip_edges() == "":
+		return "escribe el nombre del nivel"
+	if attributes.get("author", "").strip_edges() == "":
+		return "escribe el autor / créditos"
+	if attributes.get("instructions", "").strip_edges() == "":
+		return "escribe la descripción del nivel"
+	return ""
+
 func _on_save_as():
 	dialog_open = true
 	var fd := FileDialog.new()
@@ -829,6 +850,10 @@ func _on_save_as():
 func _save_to(path: String):
 	if not path.ends_with(".txt"):
 		path += ".txt"
+	var fmsg := _validate_fields()
+	if fmsg != "":
+		_set_status("No guardado: " + fmsg)
+		return
 	var dir := Directory.new()
 	dir.make_dir_recursive(path.get_base_dir())
 	_collect_fields_to_attributes()
@@ -882,7 +907,6 @@ func _set_status(text: String):
 
 func _render():
 	_render_board_data()
-	_mark_draft_dirty()
 	update()
 
 func _exit_tree():
@@ -918,6 +942,7 @@ func _load_draft(data: Dictionary):
 	_attributes_to_fields()
 	_theme_sync()
 	_sync_file_label()
+	_draft_dirty = false
 	_set_status("Borrador restaurado")
 	_render()
 
@@ -1133,6 +1158,7 @@ func _paint_cell(x: int, y: int, erase: bool):
 		map[y][x] = block
 		changed = true
 	if changed:
+		_mark_draft_dirty()
 		_render()
 		if not erase and _grew:
 			var w := 0
@@ -1174,6 +1200,7 @@ func _undo():
 	redo_stack.append(op)
 	map[op[1]][op[0]] = op[2]
 	cursor_cell = Vector2(op[0], op[1])
+	_mark_draft_dirty()
 	_render()
 	_set_status("Deshacer")
 
@@ -1186,6 +1213,7 @@ func _redo():
 	undo_stack.append(op)
 	map[op[1]][op[0]] = op[3]
 	cursor_cell = Vector2(op[0], op[1])
+	_mark_draft_dirty()
 	_render()
 	_set_status("Rehacer")
 

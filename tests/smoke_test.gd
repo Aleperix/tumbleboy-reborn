@@ -38,6 +38,8 @@ func _ready():
 	_test_main_menu()
 	_test_credits()
 	_test_play_button_toggle()
+	_test_save_validation()
+	_test_editor_draft_load()
 	_test_thumbnail_zip()
 	_test_draft_roundtrip()
 	_test_nav_params_draft()
@@ -214,7 +216,9 @@ func _test_editor():
 	_check(ed.status_label.text.find("solo lectura") >= 0, "guardar en solo lectura avisa")
 	ed.read_only = false
 	ed.current_file = ""
+	ed.name_edit.text = "Smoke"
 	ed.author_edit.text = "Tester"
+	ed.desc_edit.text = "Nivel de prueba"
 	ed._save_to("user://tumbleboy_levels/smoke_pack_level.txt")
 	_check(File.new().file_exists("user://tumbleboy_levels/smoke_pack_level.txt"), "nivel guardado a user://")
 	var zip_dir := Directory.new()
@@ -480,6 +484,54 @@ func _test_play_button_toggle():
 	ed._new_board()
 	_check(ed.play_button.text == "Probar", "tras _new_board es 'Probar'")
 	ed.free()
+
+func _test_save_validation():
+	print("== save validation ==")
+	var ed = EditorScene.instance()
+	add_child(ed)
+	ed.name_edit.text = ""
+	ed.author_edit.text = ""
+	ed.desc_edit.text = ""
+	ed._on_save()
+	_check(ed.status_label.text.find("nombre") >= 0, "guardar sin nombre avisa (got '%s')" % ed.status_label.text)
+	ed.name_edit.text = "Nivel"
+	ed._on_save()
+	_check(ed.status_label.text.find("autor") >= 0, "guardar sin autor avisa (got '%s')" % ed.status_label.text)
+	ed.author_edit.text = "Autor"
+	ed._on_save()
+	_check(ed.status_label.text.find("descripción") >= 0, "guardar sin descripción avisa (got '%s')" % ed.status_label.text)
+	ed.desc_edit.text = "Desc"
+	ed._save_to("user://tumbleboy_levels/smoke_validation.txt")
+	_check(File.new().file_exists("user://tumbleboy_levels/smoke_validation.txt"), "guardar con campos completos funciona")
+	Directory.new().remove("user://tumbleboy_levels/smoke_validation.txt")
+	ed.free()
+
+func _test_editor_draft_load():
+	print("== editor draft load ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	SaveData.save_draft({
+		"map": [[1, 2], [3, 4]],
+		"attributes": { "theme": "beach", "boy": "boy2", "name": "Borrador", "author": "A", "instructions": "I" },
+		"current_file": "",
+		"read_only": false,
+		"updated": 1
+	})
+	NavParams.clear()
+	NavParams.open_draft = true
+	var ed = EditorScene.instance()
+	add_child(ed)
+	_check(ed.map.size() == 2 and ed.map[0].size() == 2, "editor carga el mapa del borrador en _ready")
+	_check(ed.attributes.get("theme") == "beach", "tema del borrador cargado")
+	_check(ed.name_edit.text == "Borrador", "nombre del borrador en el campo (got '%s')" % ed.name_edit.text)
+	_check(ed.author_edit.text == "A", "autor del borrador en el campo")
+	_check(ed.desc_edit.text == "I", "descripción del borrador en el campo")
+	_check(ed.theme_option.get_selected_id() == ed.THEMES.find("beach"), "tema seleccionado en OptionButton")
+	_check(not NavParams.open_draft, "NavParams.open_draft consumido")
+	_check(not ed._draft_dirty, "cargar borrador no deja dirty")
+	ed.free()
+	SaveData.reset_all()
+	_restore_save(backup)
 
 func _test_thumbnail_zip():
 	print("== thumbnail zip ==")

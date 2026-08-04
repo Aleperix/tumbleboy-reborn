@@ -237,7 +237,16 @@ Métodos públicos usados por `EditorHub`:
 Otros destacados:
 
 - `_on_new()`, `_on_open()`, `_on_save()`, `_on_save_as()`, `_save_to(path)`.
+- `_validate_fields()` — exige nombre, autor y descripción antes de guardar
+  (bloquea el guardado si falta alguno).
+- `_validate_map()` — exige bloques Inicio ($) y Meta (1).
 - `_paint_cell(col, row, erase)`, `_select_paint(block)`, `_undo()`, `_redo()`,
+  `_validate_map()`, `_validate_fields()`.
+- Al abrir un nivel (`_on_open_selected`) se cargan automáticamente nombre,
+  autor, descripción, tema y niño (`_attributes_to_fields` + `_theme_sync`).
+- Borrador: se marca sucio solo al modificar (pintar, deshacer, rehacer, tema,
+  niño o campos). Abrir/crear un nivel lo limpia; `_ready` carga el borrador
+  antes de crear un tablero nuevo.
   `_cycle_block(dir)`.
 - `_validate_map() -> String` — devuelve `""` si el nivel es válido, si no el motivo.
 - Atributos: `_collect_fields_to_attributes()`, `_attributes_to_fields()`.
