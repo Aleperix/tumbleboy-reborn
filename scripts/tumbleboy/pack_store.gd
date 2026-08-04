@@ -89,9 +89,14 @@ func download_thumbnail(entry: Dictionary):
 
 func get_thumbnail_texture(id: String):
 	var p := CACHE_DIR + "thumbs/" + id + ".png"
-	if ResourceLoader.exists(p):
-		return load(p)
-	return null
+	if not File.new().file_exists(p):
+		return null
+	var img := Image.new()
+	if img.load(ProjectSettings.globalize_path(p)) != OK:
+		return null
+	var tex := ImageTexture.new()
+	tex.create_from_image(img)
+	return tex
 
 func _on_request_completed(result: int, response_code: int, headers: PoolStringArray, body: PoolByteArray):
 	var what := _pending
