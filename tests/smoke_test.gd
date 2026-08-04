@@ -270,7 +270,8 @@ func _test_main_menu():
 	var texts := []
 	if vbox != null:
 		for ch in vbox.get_children():
-			texts.append(ch.text)
+			if ch.has_method("get_text") or "text" in ch:
+				texts.append(ch.text)
 	_check(texts.size() == 6, "menú: título+subtítulo+3 botones+hint (got %d)" % texts.size())
 	_check(texts.has("TUMBLEBOY REBORN"), "título TumbleBoy presente")
 	_check(texts.has("Niveles y packs"), "botón Niveles y packs presente")

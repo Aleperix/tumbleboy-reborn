@@ -4,9 +4,9 @@ extends Control
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 
 const GAMES := [
-	{ "id": "play", "name": "Jugar — TumbleBoy (historia)", "scene": "res://scenes/TumbleBoy.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
-	{ "id": "levels", "name": "Niveles y packs", "scene": "res://scenes/LevelSelect.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
-	{ "id": "editor", "name": "Editor de niveles", "scene": "res://scenes/TumbleBoyEditor.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
+	{ "id": "play", "name": "Jugar — TumbleBoy (historia)", "scene": "res://scenes/TumbleBoy.tscn" },
+	{ "id": "levels", "name": "Niveles y packs", "scene": "res://scenes/LevelSelect.tscn" },
+	{ "id": "editor", "name": "Editor de niveles", "scene": "res://scenes/TumbleBoyEditor.tscn" },
 ]
 
 var buttons: Array = []
@@ -23,41 +23,47 @@ func _build_ui():
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	add_child(bg)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_WIDE)
-	add_child(center)
-
 	var vbox := VBoxContainer.new()
+	vbox.anchor_left = 0.5
+	vbox.anchor_right = 0.5
+	vbox.anchor_top = 0.0
+	vbox.anchor_bottom = 1.0
+	vbox.margin_left = -220
+	vbox.margin_right = 220
+	vbox.margin_top = 60
+	vbox.margin_bottom = -40
 	vbox.alignment = BoxContainer.ALIGN_CENTER
-	vbox.add_constant_override("separation", 10)
-	center.add_child(vbox)
+	vbox.add_constant_override("separation", 12)
+	add_child(vbox)
 
 	var title := Label.new()
 	title.text = "TUMBLEBOY REBORN"
+	title.add_font_override("font", UIFonts.make_font(36, true))
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
-	title.add_font_override("font", UIFonts.make_font(34, true))
 	title.align = Label.ALIGN_CENTER
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(title)
 
 	var sub := Label.new()
 	sub.text = "La reencarnación del juego perdido de las XO / Ceibalitas"
-	sub.add_color_override("font_color", Color(0.6, 0.55, 0.7))
+	sub.add_font_override("font", UIFonts.make_font(16))
+	sub.add_color_override("font_color", Color(0.7, 0.67, 0.8))
 	sub.align = Label.ALIGN_CENTER
-	sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(sub)
+
+	var sep := VBoxContainer.new()
+	sep.add_constant_override("separation", 0)
+	sep.rect_min_size.y = 20
+	vbox.add_child(sep)
 
 	for g in GAMES:
 		var btn := Button.new()
 		btn.text = g["name"]
 		btn.focus_mode = Control.FOCUS_ALL
+		btn.rect_min_size = Vector2(400, 50)
 		btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		btn.rect_min_size = Vector2(420, 46)
-		btn.add_font_override("font", UIFonts.make_font(17))
+		btn.add_font_override("font", UIFonts.make_font(18))
 		btn.add_color_override("font_color", Color(0.95, 0.93, 0.88))
-		btn.disabled = not g["enabled"]
-		if g["enabled"]:
-			btn.connect("pressed", self, "_on_game_pressed", [g])
+		btn.connect("pressed", self, "_on_game_pressed", [g])
 		vbox.add_child(btn)
 		buttons.append(btn)
 
@@ -66,18 +72,11 @@ func _build_ui():
 	hint.add_font_override("font", UIFonts.make_font(14))
 	hint.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 	hint.align = Label.ALIGN_CENTER
-	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(hint)
 
-	# foco inicial
-	var first_enabled := -1
-	for i in range(buttons.size()):
-		if not buttons[i].disabled:
-			first_enabled = i
-			break
-	if first_enabled >= 0:
-		buttons[first_enabled].grab_focus()
-		selected = first_enabled
+	if buttons.size() > 0:
+		buttons[0].grab_focus()
+		selected = 0
 
 func _on_game_pressed(g: Dictionary):
 	get_tree().change_scene(g["scene"])
