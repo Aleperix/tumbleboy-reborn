@@ -30,7 +30,7 @@ func _ready():
 	_rebuild_menu()
 
 func _build_ui():
-	set_anchors_preset(Control.PRESET_WIDE)
+	set_anchors_and_margins_preset(Control.PRESET_WIDE, Control.PRESET_MODE_MINSIZE, 0)
 	var bg := ColorRect.new()
 	bg.color = Color(0.07, 0.05, 0.12)
 	bg.set_anchors_preset(Control.PRESET_WIDE)

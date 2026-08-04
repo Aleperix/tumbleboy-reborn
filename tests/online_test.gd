@@ -35,8 +35,8 @@ func _on_index_err(msg: String):
 
 func _on_index(list: Array, from_cache: bool):
 	print("  index_updated (cache=%s) entries=%d" % [str(from_cache), list.size()])
-	_check(list.size() == 1, "1 pack en el índice (hay %d)" % list.size())
-	if list.size() != 1:
+	_check(list.size() == 3, "3 packs en el índice (hay %d)" % list.size())
+	if list.size() != 3:
 		_finish()
 		return
 	var e: Dictionary = list[0]
