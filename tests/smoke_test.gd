@@ -261,15 +261,17 @@ func _test_main_menu():
 	print("== main menu ==")
 	var mm = MainMenuScene.instance()
 	add_child(mm)
-	var vbox: VBoxContainer = null
+	var col: VBoxContainer = null
 	for ch in mm.get_children():
-		if ch is VBoxContainer:
-			vbox = ch
-			break
-	_check(vbox != null, "menú tiene VBoxContainer")
+		if ch is CenterContainer:
+			for ch2 in ch.get_children():
+				if ch2 is VBoxContainer:
+					col = ch2
+					break
+	_check(col != null, "menú tiene VBoxContainer dentro de CenterContainer")
 	var texts := []
-	if vbox != null:
-		for ch in vbox.get_children():
+	if col != null:
+		for ch in col.get_children():
 			if ch.has_method("get_text") or "text" in ch:
 				texts.append(ch.text)
 	_check(texts.size() == 6, "menú: título+subtítulo+3 botones+hint (got %d)" % texts.size())

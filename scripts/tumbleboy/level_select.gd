@@ -36,44 +36,44 @@ func _build_ui():
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	add_child(bg)
 
-	var vbox := VBoxContainer.new()
-	vbox.anchor_left = 0.5
-	vbox.anchor_right = 0.5
-	vbox.anchor_top = 0.0
-	vbox.anchor_bottom = 1.0
-	vbox.margin_left = -320
-	vbox.margin_right = 320
-	vbox.margin_top = 16
-	vbox.margin_bottom = -30
-	vbox.alignment = BoxContainer.ALIGN_CENTER
-	vbox.add_constant_override("separation", 6)
-	add_child(vbox)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_WIDE)
+	add_child(center)
+
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGN_CENTER
+	col.add_constant_override("separation", 6)
+	center.add_child(col)
 
 	var title := Label.new()
 	title.text = "SELECCIONAR NIVEL"
 	title.add_font_override("font", UIFonts.make_font(34, true))
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
 	title.align = Label.ALIGN_CENTER
-	vbox.add_child(title)
+	col.add_child(title)
 
 	var sub := Label.new()
 	sub.text = "Historia nostálgica · packs de la comunidad · tus niveles"
 	sub.add_font_override("font", UIFonts.make_font(16))
 	sub.add_color_override("font_color", Color(0.7, 0.67, 0.8))
 	sub.align = Label.ALIGN_CENTER
-	vbox.add_child(sub)
+	col.add_child(sub)
+
+	var spacer := Control.new()
+	spacer.rect_min_size = Vector2(0, 8)
+	col.add_child(spacer)
 
 	menu_vbox = VBoxContainer.new()
 	menu_vbox.alignment = BoxContainer.ALIGN_CENTER
 	menu_vbox.add_constant_override("separation", 4)
-	vbox.add_child(menu_vbox)
+	col.add_child(menu_vbox)
 
 	var hint := Label.new()
 	hint.text = "D-pad / Flechas: mover · A / Enter: entrar · B / ESC: volver"
 	hint.add_font_override("font", UIFonts.make_font(14))
 	hint.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 	hint.align = Label.ALIGN_CENTER
-	vbox.add_child(hint)
+	col.add_child(hint)
 
 func _section_label(text: String) -> Label:
 	var l := Label.new()
@@ -184,53 +184,42 @@ func _build_online_panel():
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	online_panel.add_child(bg)
 
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_WIDE)
+	online_panel.add_child(center)
+
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGN_CENTER
+	col.add_constant_override("separation", 10)
+	center.add_child(col)
+
 	var title := Label.new()
 	title.text = "PACKS DE LA COMUNIDAD"
 	title.add_font_override("font", UIFonts.make_font(28, true))
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
 	title.align = Label.ALIGN_CENTER
-	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title.margin_top = 18
-	online_panel.add_child(title)
+	col.add_child(title)
 
 	online_status = Label.new()
 	online_status.text = "Actualizando…"
 	online_status.add_font_override("font", UIFonts.make_font(15))
 	online_status.add_color_override("font_color", Color(0.7, 0.7, 0.8))
 	online_status.align = Label.ALIGN_CENTER
-	online_status.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	online_status.margin_top = 62
-	online_panel.add_child(online_status)
-
-	var scroll := ScrollContainer.new()
-	scroll.set_anchors_preset(Control.PRESET_WIDE)
-	scroll.margin_top = 100
-	scroll.margin_bottom = -64
-	online_panel.add_child(scroll)
+	col.add_child(online_status)
 
 	online_vbox = VBoxContainer.new()
-	online_vbox.anchor_left = 0.5
-	online_vbox.anchor_right = 0.5
-	online_vbox.anchor_top = 0.0
-	online_vbox.anchor_bottom = 1.0
-	online_vbox.margin_left = -300
-	online_vbox.margin_right = 300
 	online_vbox.alignment = BoxContainer.ALIGN_CENTER
 	online_vbox.add_constant_override("separation", 10)
-	scroll.add_child(online_vbox)
+	col.add_child(online_vbox)
+
+	var spacer := Control.new()
+	spacer.rect_min_size = Vector2(0, 8)
+	col.add_child(spacer)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGN_CENTER
 	row.add_constant_override("separation", 16)
-	row.anchor_left = 0.5
-	row.anchor_right = 0.5
-	row.anchor_top = 1.0
-	row.anchor_bottom = 1.0
-	row.margin_left = -220
-	row.margin_right = 220
-	row.margin_top = -52
-	row.margin_bottom = -8
-	online_panel.add_child(row)
+	col.add_child(row)
 
 	var update_btn := Button.new()
 	update_btn.text = "Actualizar"
