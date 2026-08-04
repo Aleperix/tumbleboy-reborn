@@ -50,6 +50,7 @@ var map: Array = []
 var attributes := {}
 var selected_block := C.BLOCK_FLOOR
 var play_mode := false
+var play_button: Button
 var board_texture: Texture = null
 var anim_timer := 0.0
 
@@ -76,6 +77,9 @@ var pack_panel: Control
 var pack_name_edit: LineEdit
 var pack_author_edit: LineEdit
 var pack_desc_edit: LineEdit
+var pack_thumb_image: Image
+var pack_thumb_texture: ImageTexture
+var pack_thumb_preview: TextureRect
 var available_list: ItemList
 var pack_list: ItemList
 var pack_available: Array = []
@@ -87,6 +91,8 @@ var last_mouse_pos := Vector2(-9999, -9999)
 var mouse_button := 0
 var touch_painting := false
 var _grew := false
+var _draft_dirty := false
+var _draft_timer := 0.0
 
 var undo_stack: Array = []
 var redo_stack: Array = []
@@ -102,7 +108,10 @@ func _ready():
 	_new_board()
 	_build_ui()
 	_render()
-	if NavParams.open_file != "":
+	if NavParams.open_draft and SaveData.has_draft():
+		_load_draft(SaveData.get_draft())
+		NavParams.open_draft = false
+	elif NavParams.open_file != "":
 		call_deferred("open_file", NavParams.open_file)
 		NavParams.open_file = ""
 	if NavParams.open_pack_panel:
@@ -121,12 +130,14 @@ func _build_ui():
 	x = _add_tool_button(x, "Abrir", "_on_open", 80)
 	x = _add_tool_button(x, "Guardar", "_on_save", 90)
 	x = _add_tool_button(x, "Guardar como", "_on_save_as", 110)
-	x = _add_tool_button(x, "Probar", "_on_toggle_play", 90)
-	x = _add_tool_button(x, "Salir", "_on_exit", 70)
-	x += 4
-	x = _add_tool_button(x, "?", "_toggle_help", 34)
-	x = _add_tool_button(x, "Crear pack", "_on_open_pack", 96)
-	x = _add_tool_button(x, "Exportar pack", "_on_open_export", 96)
+
+	play_button = _make_tool_button("Probar", "_on_toggle_play", 90)
+	play_button.rect_position = Vector2(555, 8)
+
+	_make_tool_button("Crear pack", "_on_open_pack", 96).rect_position = Vector2(884, 8)
+	_make_tool_button("Exportar pack", "_on_open_export", 96).rect_position = Vector2(984, 8)
+	_make_tool_button("?", "_toggle_help", 34).rect_position = Vector2(1084, 8)
+	_make_tool_button("Salir", "_on_exit", 70).rect_position = Vector2(1122, 8)
 
 	name_edit = LineEdit.new()
 	name_edit.rect_position = Vector2(8, 40)
@@ -134,6 +145,7 @@ func _build_ui():
 	name_edit.placeholder_text = "nombre del nivel"
 	name_edit.add_font_override("font", UIFonts.make_font(14))
 	name_edit.connect("text_entered", self, "_on_name_entered")
+	name_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(name_edit)
 
 	author_edit = LineEdit.new()
@@ -141,6 +153,7 @@ func _build_ui():
 	author_edit.rect_size = Vector2(140, 24)
 	author_edit.placeholder_text = "autor / créditos"
 	author_edit.add_font_override("font", UIFonts.make_font(14))
+	author_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(author_edit)
 
 	var theme_label := Label.new()
@@ -151,7 +164,7 @@ func _build_ui():
 	add_child(theme_label)
 
 	theme_option = OptionButton.new()
-	theme_option.rect_position = Vector2(338, 40)
+	theme_option.rect_position = Vector2(352, 40)
 	theme_option.rect_size = Vector2(150, 24)
 	for t in THEMES:
 		theme_option.add_item(THEME_NAMES.get(t, t))
@@ -163,11 +176,11 @@ func _build_ui():
 	boy_label.text = "Niño"
 	boy_label.add_font_override("font", UIFonts.make_font(14))
 	boy_label.add_color_override("font_color", Color(0.8, 0.8, 0.85))
-	boy_label.rect_position = Vector2(496, 44)
+	boy_label.rect_position = Vector2(512, 44)
 	add_child(boy_label)
 
 	boy_option = OptionButton.new()
-	boy_option.rect_position = Vector2(530, 40)
+	boy_option.rect_position = Vector2(556, 40)
 	boy_option.rect_size = Vector2(170, 24)
 	for b in BOYS:
 		boy_option.add_item(BOY_NAMES.get(b, b))
@@ -176,8 +189,8 @@ func _build_ui():
 	add_child(boy_option)
 
 	status_label = Label.new()
-	status_label.rect_position = Vector2(710, 42)
-	status_label.rect_size = Vector2(482, 22)
+	status_label.rect_position = Vector2(736, 42)
+	status_label.rect_size = Vector2(456, 22)
 	status_label.add_font_override("font", UIFonts.make_font(14))
 	status_label.add_color_override("font_color", Color(0.6, 0.9, 0.6))
 	add_child(status_label)
@@ -187,6 +200,7 @@ func _build_ui():
 	desc_edit.rect_size = Vector2(360, 24)
 	desc_edit.placeholder_text = "descripción del nivel"
 	desc_edit.add_font_override("font", UIFonts.make_font(14))
+	desc_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(desc_edit)
 
 	file_label = Label.new()
@@ -423,23 +437,52 @@ func _build_pack_panel():
 	pack_desc_edit.add_font_override("font", UIFonts.make_font(14))
 	pack_panel.add_child(pack_desc_edit)
 
+	var thumb_label := Label.new()
+	thumb_label.text = "Miniatura:"
+	thumb_label.add_font_override("font", UIFonts.make_font(14))
+	thumb_label.add_color_override("font_color", Color(0.8, 0.8, 0.85))
+	thumb_label.rect_position = Vector2(180, 242)
+	pack_panel.add_child(thumb_label)
+
+	pack_thumb_preview = TextureRect.new()
+	pack_thumb_preview.rect_position = Vector2(300, 232)
+	pack_thumb_preview.rect_size = Vector2(96, 96)
+	pack_thumb_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pack_panel.add_child(pack_thumb_preview)
+
+	var thumb_btn_pick := Button.new()
+	thumb_btn_pick.text = "Seleccionar imagen..."
+	thumb_btn_pick.rect_position = Vector2(416, 236)
+	thumb_btn_pick.rect_size = Vector2(180, 30)
+	thumb_btn_pick.add_font_override("font", UIFonts.make_font(13))
+	thumb_btn_pick.connect("pressed", self, "_on_pick_thumb")
+	pack_panel.add_child(thumb_btn_pick)
+
+	var thumb_btn_auto := Button.new()
+	thumb_btn_auto.text = "Generar desde el primer nivel"
+	thumb_btn_auto.rect_position = Vector2(416, 274)
+	thumb_btn_auto.rect_size = Vector2(180, 30)
+	thumb_btn_auto.add_font_override("font", UIFonts.make_font(13))
+	thumb_btn_auto.connect("pressed", self, "_on_auto_thumb")
+	pack_panel.add_child(thumb_btn_auto)
+
 	var col_label := Label.new()
 	col_label.text = "Niveles de usuario disponibles:"
 	col_label.add_font_override("font", UIFonts.make_font(15))
 	col_label.add_color_override("font_color", Color(0.85, 0.85, 0.9))
-	col_label.rect_position = Vector2(180, 250)
+	col_label.rect_position = Vector2(180, 344)
 	pack_panel.add_child(col_label)
 
 	available_list = ItemList.new()
-	available_list.rect_position = Vector2(180, 280)
-	available_list.rect_size = Vector2(360, 320)
+	available_list.rect_position = Vector2(180, 374)
+	available_list.rect_size = Vector2(360, 300)
 	available_list.add_font_override("font", UIFonts.make_font(14))
 	available_list.focus_mode = Control.FOCUS_ALL
 	pack_panel.add_child(available_list)
 
 	var mid := VBoxContainer.new()
-	mid.rect_position = Vector2(556, 300)
-	mid.rect_size = Vector2(88, 280)
+	mid.rect_position = Vector2(556, 394)
+	mid.rect_size = Vector2(88, 260)
 	mid.add_constant_override("separation", 8)
 	pack_panel.add_child(mid)
 	mid.add_child(_pack_mid_button(">", "_on_pack_add"))
@@ -451,19 +494,19 @@ func _build_pack_panel():
 	order_label.text = "Niveles del pack (en orden):"
 	order_label.add_font_override("font", UIFonts.make_font(15))
 	order_label.add_color_override("font_color", Color(0.85, 0.85, 0.9))
-	order_label.rect_position = Vector2(660, 250)
+	order_label.rect_position = Vector2(660, 344)
 	pack_panel.add_child(order_label)
 
 	pack_list = ItemList.new()
-	pack_list.rect_position = Vector2(660, 280)
-	pack_list.rect_size = Vector2(360, 320)
+	pack_list.rect_position = Vector2(660, 374)
+	pack_list.rect_size = Vector2(360, 300)
 	pack_list.add_font_override("font", UIFonts.make_font(14))
 	pack_list.focus_mode = Control.FOCUS_ALL
 	pack_panel.add_child(pack_list)
 
 	var ok := Button.new()
 	ok.text = "Crear pack"
-	ok.rect_position = Vector2(560, 620)
+	ok.rect_position = Vector2(560, 700)
 	ok.rect_size = Vector2(160, 36)
 	ok.add_font_override("font", UIFonts.make_font(15))
 	ok.connect("pressed", self, "_on_create_pack")
@@ -471,7 +514,7 @@ func _build_pack_panel():
 
 	var cancel := Button.new()
 	cancel.text = "Cancelar  (B)"
-	cancel.rect_position = Vector2(740, 620)
+	cancel.rect_position = Vector2(740, 700)
 	cancel.rect_size = Vector2(160, 36)
 	cancel.add_font_override("font", UIFonts.make_font(15))
 	cancel.connect("pressed", self, "_on_close_pack")
@@ -559,18 +602,25 @@ func _toggle_help():
 		_set_status("")
 
 func _add_tool_button(x: float, text: String, method: String, width: float) -> float:
+	var btn := _make_tool_button(text, method, width)
+	btn.rect_position = Vector2(x, 8)
+	return x + width + 4
+
+func _make_tool_button(text: String, method: String, width: float) -> Button:
 	var btn := Button.new()
 	btn.text = text
 	btn.focus_mode = Control.FOCUS_NONE
-	btn.rect_position = Vector2(x, 8)
 	btn.rect_size = Vector2(width, 30)
 	btn.add_font_override("font", UIFonts.make_font(14))
 	btn.connect("pressed", self, method)
 	add_child(btn)
-	return x + width + 4
+	return btn
 
 func _on_name_entered(_text: String):
 	_set_status("Nombre: " + name_edit.text)
+
+func _on_field_changed(_text: String):
+	_mark_draft_dirty()
 
 func _on_theme_selected(idx: int):
 	attributes["theme"] = THEMES[idx]
@@ -631,6 +681,7 @@ func _new_board():
 	attributes = { "theme": "default", "boy": "boy1" }
 	selected_block = C.BLOCK_FLOOR
 	play_mode = false
+	_sync_play_button()
 	ball = null
 	undo_stack = []
 	redo_stack = []
@@ -638,6 +689,8 @@ func _new_board():
 	cursor_accum = Vector2.ZERO
 	current_file = ""
 	read_only = false
+	SaveData.clear_draft()
+	_draft_dirty = false
 	_attributes_to_fields()
 	_theme_sync()
 	_sync_file_label()
@@ -705,6 +758,7 @@ func _on_open_selected(path: String):
 	attributes = info["attributes"]
 	selected_block = C.BLOCK_FLOOR
 	play_mode = false
+	_sync_play_button()
 	ball = null
 	undo_stack = []
 	redo_stack = []
@@ -712,6 +766,8 @@ func _on_open_selected(path: String):
 	cursor_accum = Vector2.ZERO
 	current_file = path
 	read_only = path.begins_with("res://")
+	SaveData.clear_draft()
+	_draft_dirty = false
 	_attributes_to_fields()
 	_theme_sync()
 	_sync_file_label()
@@ -780,6 +836,8 @@ func _save_to(path: String):
 	if saved:
 		current_file = path
 		read_only = false
+		SaveData.clear_draft()
+		_draft_dirty = false
 		_sync_file_label()
 		_set_status("Guardado: " + path)
 	else:
@@ -800,6 +858,7 @@ func _enter_play():
 		ball.set_board(board)
 		ball.set_position(sp.x, sp.y, 0)
 		play_mode = true
+		_sync_play_button()
 		_set_status("Vista previa: B para volver a editar")
 	else:
 		_set_status("Pon el bloque 'Inicio' ($) primero")
@@ -807,7 +866,12 @@ func _enter_play():
 func _exit_play():
 	play_mode = false
 	ball = null
+	_sync_play_button()
 	_set_status("")
+
+func _sync_play_button():
+	if play_button != null:
+		play_button.text = "Parar" if play_mode else "Probar"
 
 func _on_exit():
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
@@ -818,7 +882,44 @@ func _set_status(text: String):
 
 func _render():
 	_render_board_data()
+	_mark_draft_dirty()
 	update()
+
+func _exit_tree():
+	if _draft_dirty:
+		_save_draft()
+
+func _mark_draft_dirty():
+	_draft_dirty = true
+	_draft_timer = 0.0
+
+func _save_draft():
+	_collect_fields_to_attributes()
+	SaveData.save_draft({
+		"map": map,
+		"attributes": attributes,
+		"current_file": current_file,
+		"read_only": read_only,
+		"updated": OS.get_unix_time()
+	})
+	_draft_dirty = false
+
+func _load_draft(data: Dictionary):
+	map = data.get("map", [])
+	attributes = data.get("attributes", {})
+	current_file = data.get("current_file", "")
+	read_only = data.get("read_only", false)
+	selected_block = C.BLOCK_FLOOR
+	ball = null
+	undo_stack = []
+	redo_stack = []
+	cursor_cell = Vector2.ZERO
+	cursor_accum = Vector2.ZERO
+	_attributes_to_fields()
+	_theme_sync()
+	_sync_file_label()
+	_set_status("Borrador restaurado")
+	_render()
 
 func _render_board_data():
 	board.clear()
@@ -835,6 +936,10 @@ func _render_board_data():
 	board_texture = board.render_board_image()
 
 func _process(delta):
+	if _draft_dirty:
+		_draft_timer += delta
+		if _draft_timer >= 2.5:
+			_save_draft()
 	if play_mode:
 		_process_play(delta)
 		return
@@ -1197,8 +1302,63 @@ func _on_open_pack():
 	pack_name_edit.text = attributes.get("name", "") + " pack"
 	pack_author_edit.text = attributes.get("author", "")
 	pack_desc_edit.text = ""
+	pack_thumb_image = null
+	pack_thumb_texture = null
+	pack_thumb_preview.texture = null
 	pack_name_edit.grab_focus()
 	_set_status("Crea un pack de niveles (ZIP + manifest.json)")
+
+func _on_pick_thumb():
+	var fd := FileDialog.new()
+	fd.mode = FileDialog.MODE_OPEN_FILE
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.add_filter("*.png ; PNG Images")
+	fd.window_title = "Seleccionar miniatura (PNG)"
+	fd.connect("file_selected", self, "_on_thumb_picked")
+	fd.connect("popup_hide", self, "_on_dialog_closed")
+	add_child(fd)
+	fd.popup_centered_ratio(0.7)
+
+func _on_thumb_picked(path: String):
+	var img := Image.new()
+	if img.load(path) != OK:
+		_set_status("Error al cargar imagen")
+		return
+	img.resize(128, 128, Image.INTERPOLATE_BILINEAR)
+	pack_thumb_image = img
+	pack_thumb_texture = ImageTexture.new()
+	pack_thumb_texture.create_from_image(img)
+	pack_thumb_preview.texture = pack_thumb_texture
+	_set_status("Miniatura cargada")
+
+func _on_auto_thumb():
+	if pack_list.get_item_count() == 0:
+		_set_status("Agrega al menos un nivel antes de generar la miniatura")
+		return
+	var first_path = pack_list.get_item_text(0)
+	if not first_path.begins_with("user://") and not first_path.begins_with("res://"):
+		first_path = "user://tumbleboy_levels/" + first_path
+	var info = LevelsScript.parse_level(first_path)
+	var temp_board = BoardScript.new()
+	temp_board.set_theme(info["attributes"].get("theme", "default"))
+	var temp_map = info["map"]
+	var w := 0
+	for row in temp_map:
+		w = max(w, row.size())
+	temp_board.set_dimensions(w, temp_map.size())
+	for y in range(temp_map.size()):
+		var row = temp_map[y]
+		for x in range(row.size()):
+			if row[x] != C.BLOCK_NONE:
+				temp_board.set_block(x, y, row[x])
+	var tex = temp_board.render_board_image()
+	var img = tex.get_data()
+	img.resize(128, 128, Image.INTERPOLATE_BILINEAR)
+	pack_thumb_image = img
+	pack_thumb_texture = ImageTexture.new()
+	pack_thumb_texture.create_from_image(img)
+	pack_thumb_preview.texture = pack_thumb_texture
+	_set_status("Miniatura generada del primer nivel")
 
 func _on_close_pack():
 	pack_panel.visible = false
@@ -1308,6 +1468,9 @@ func _on_create_pack():
 	files["manifest.json"] = JSON.print(manifest, "  ")
 	for p in pack_selected:
 		files["levels/" + p.get_file()] = _read_text_file(p)
+	if pack_thumb_image != null:
+		pack_thumb_image.resize(128, 128, Image.INTERPOLATE_BILINEAR)
+		files["thumbnail.png"] = pack_thumb_image.save_png_to_buffer()
 	var dir := Directory.new()
 	dir.make_dir_recursive(PACKS_DIR)
 	var zip_path := PACKS_DIR + id + ".zip"

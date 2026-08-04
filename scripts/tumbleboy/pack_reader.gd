@@ -79,3 +79,20 @@ static func extract_pack(zip_path: String, dest_dir: String) -> Array:
 			out.append(target)
 	out.sort()
 	return out
+
+static func get_thumbnail_texture(zip_path: String) -> Texture:
+	var data = ZipReader.read_file(zip_path, "thumbnail.png")
+	if data == null or data.size() == 0:
+		return null
+	var img := Image.new()
+	if img.load_png_from_buffer(data) != OK:
+		return null
+	var tex := ImageTexture.new()
+	tex.create_from_image(img)
+	return tex
+
+static func remove_pack(id: String) -> bool:
+	var dir := Directory.new()
+	if dir.remove(PACKS_DIR + id + ".zip") == OK:
+		return true
+	return false

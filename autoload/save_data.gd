@@ -9,6 +9,7 @@ var games: Dictionary = {}
 var active_slot: int = -1
 var active_key: String = ""
 var downloaded_packs: Array = []
+var draft: Dictionary = {}
 
 func _init():
 	_load()
@@ -23,12 +24,16 @@ func _load():
 					games = parsed["games"]
 				if parsed.has("downloaded_packs"):
 					downloaded_packs = parsed["downloaded_packs"]
+				if parsed.has("draft"):
+					draft = parsed["draft"]
+					if not draft is Dictionary:
+						draft = {}
 			file.close()
 
 func _save():
 	var file := File.new()
 	if file.open(SAVE_PATH, File.WRITE) == OK:
-		file.store_string(JSON.print({ "version": 1, "games": games, "downloaded_packs": downloaded_packs }))
+		file.store_string(JSON.print({ "version": 1, "games": games, "downloaded_packs": downloaded_packs, "draft": draft }))
 		file.close()
 
 # --- Zócalos ---
@@ -129,6 +134,27 @@ func is_pack_downloaded(id: String) -> bool:
 func is_pack_local(id: String) -> bool:
 	return not downloaded_packs.has(id)
 
+func clear_pack(id: String):
+	downloaded_packs.erase(id)
+	games.erase("pack:" + id)
+	_save()
+
+# --- Borrador del editor ---
+
+func has_draft() -> bool:
+	return draft.size() > 0
+
+func get_draft() -> Dictionary:
+	return draft
+
+func save_draft(data: Dictionary):
+	draft = data
+	_save()
+
+func clear_draft():
+	draft = {}
+	_save()
+
 # --- Utilidades ---
 
 func _make_key(mode: String, id: String) -> String:
@@ -142,6 +168,7 @@ func get_game_key(mode: String, id: String) -> String:
 func reset_all():
 	games = {}
 	downloaded_packs = []
+	draft = {}
 	active_slot = -1
 	active_key = ""
 	_save()

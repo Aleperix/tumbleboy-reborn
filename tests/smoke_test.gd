@@ -18,6 +18,7 @@ const CreditsScene = preload("res://scenes/Credits.tscn")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const ZipWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
 const ZipReader = preload("res://scripts/tumbleboy/zip_reader.gd")
+const PackRow = preload("res://scripts/ui/pack_row.gd")
 
 var failures := 0
 
@@ -36,6 +37,15 @@ func _ready():
 	_test_editor_hub()
 	_test_main_menu()
 	_test_credits()
+	_test_play_button_toggle()
+	_test_thumbnail_zip()
+	_test_draft_roundtrip()
+	_test_nav_params_draft()
+	_test_hub_draft_section()
+	_test_descargados_buttons()
+	_test_propios_buttons()
+	_test_game_icon()
+	_test_pack_row()
 	yield(get_tree(), "idle_frame")
 	yield(_test_navigation(), "completed")
 	yield(get_tree(), "idle_frame")
@@ -454,6 +464,130 @@ func _test_credits():
 	if bb != null:
 		_check(bb.text.find("Volver") >= 0, "botón de regreso etiquetado")
 	cr.free()
+
+func _test_play_button_toggle():
+	print("== play button toggle ==")
+	var ed = EditorScene.instance()
+	add_child(ed)
+	_check(ed.play_button != null, "play_button existe")
+	_check(ed.play_button.text == "Probar", "botón inicia como 'Probar'")
+	ed._select_paint(C.BLOCK_START)
+	ed._paint_cell(1, 1, false)
+	ed._enter_play()
+	_check(ed.play_button.text == "Parar", "tras _enter_play cambia a 'Parar'")
+	ed._exit_play()
+	_check(ed.play_button.text == "Probar", "tras _exit_play vuelve a 'Probar'")
+	ed._new_board()
+	_check(ed.play_button.text == "Probar", "tras _new_board es 'Probar'")
+	ed.free()
+
+func _test_thumbnail_zip():
+	print("== thumbnail zip ==")
+	var img := Image.new()
+	img.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 0, 0))
+	var png_bytes := img.save_png_to_buffer()
+	var files := {
+		"manifest.json": "{\"name\": \"ThumbTest\"}",
+		"levels/a.txt": ".name {A}\n!!!\n---- \n!!!\n",
+		"thumbnail.png": png_bytes,
+	}
+	var zp := "user://smoke_thumb.zip"
+	Directory.new().remove(zp)
+	_check(ZipWriter.write_pack_zip(zp, files), "ZIP con thumbnail se crea")
+	var names = ZipReader.get_files(zp)
+	_check(names.has("thumbnail.png"), "thumbnail.png está en el ZIP")
+	var thumb_data = ZipReader.read_file(zp, "thumbnail.png")
+	_check(thumb_data != null and thumb_data.size() > 0, "thumbnail.png tiene contenido")
+	var loaded_img := Image.new()
+	_check(loaded_img.load_png_from_buffer(thumb_data) == OK, "thumbnail.png se carga como PNG")
+	var tex = PackReader.get_thumbnail_texture(zp)
+	_check(tex != null, "get_thumbnail_texture retorna textura")
+	Directory.new().remove(zp)
+
+func _test_draft_roundtrip():
+	print("== draft roundtrip ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	_check(not SaveData.has_draft(), "sin borrador al inicio")
+	SaveData.save_draft({ "map": [[1, 2]], "attributes": { "theme": "desert" }, "current_file": "", "read_only": false, "updated": 123 })
+	_check(SaveData.has_draft(), "has_draft tras save_draft")
+	var d: Dictionary = SaveData.get_draft()
+	_check(d.get("map", []).size() == 1, "draft.map保存")
+	_check(d.get("attributes", {}).get("theme") == "desert", "draft.attributes保存")
+	SaveData.clear_draft()
+	_check(not SaveData.has_draft(), "clear_draft elimina el borrador")
+	SaveData.save_draft({ "map": [[3]], "attributes": {}, "current_file": "", "read_only": false, "updated": 456 })
+	SaveData.reset_all()
+	_check(not SaveData.has_draft(), "reset_all limpia borrador")
+	_restore_save(backup)
+
+func _test_nav_params_draft():
+	print("== nav params draft ==")
+	NavParams.clear()
+	_check(not NavParams.open_draft, "open_draft false al inicio")
+	NavParams.open_draft = true
+	_check(NavParams.open_draft, "open_draft se puede activar")
+	NavParams.clear()
+	_check(not NavParams.open_draft, "clear resetea open_draft")
+
+func _test_hub_draft_section():
+	print("== hub draft section ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	var eh = EditorHubScene.instance()
+	add_child(eh)
+	eh._on_open_niveles()
+	_check(eh.niveles_panel.visible, "abre niveles sin draft: sin sección borrador")
+	var no_borrador := true
+	for ch in eh.niveles_vbox.get_children():
+		if ch is Label and ch.text == "Borrador":
+			no_borrador = false
+	_check(no_borrador, "no aparece 'Borrador' cuando no hay draft")
+	SaveData.save_draft({ "map": [[1]], "attributes": {}, "current_file": "", "read_only": false, "updated": 1 })
+	eh._refresh_niveles()
+	var found_borrador := false
+	for ch in eh.niveles_vbox.get_children():
+		if ch is Label and ch.text == "Borrador":
+			found_borrador = true
+	_check(found_borrador, "aparece 'Borrador' cuando hay draft")
+	eh._on_close_niveles()
+	eh.free()
+	SaveData.reset_all()
+	_restore_save(backup)
+
+func _test_descargados_buttons():
+	print("== descargados buttons ==")
+	var pc = PacksCommunityScene.instance()
+	add_child(pc)
+	_check(pc.uninstall_dialog == null, "uninstall_dialog se crea bajo demanda")
+	pc.free()
+
+func _test_propios_buttons():
+	print("== propios buttons ==")
+	var eh = EditorHubScene.instance()
+	add_child(eh)
+	_check(eh.delete_dialog == null, "delete_dialog se crea bajo demanda")
+	eh.free()
+
+func _test_game_icon():
+	print("== game icon ==")
+	var icon_path: String = ProjectSettings.get_setting("application/config/icon")
+	_check(icon_path == "res://assets/tumbleboy/icon.png", "icono del proyecto = assets/tumbleboy/icon.png (got '%s')" % icon_path)
+	_check(File.new().file_exists(icon_path), "archivo de icono existe")
+
+func _test_pack_row():
+	print("== pack_row ==")
+	var p := { "name": "TestPack", "author": "Tester" }
+	var row = PackRow.make(p, null, [])
+	_check(row is HBoxContainer, "pack_row retorna HBoxContainer")
+	_check(row.get_child_count() == 2, "pack_row sin botones: preview + info (got %d)" % row.get_child_count())
+	var play_btn := Button.new()
+	play_btn.text = "Jugar"
+	var del_btn := Button.new()
+	del_btn.text = "Eliminar"
+	var row2 = PackRow.make(p, null, [play_btn, del_btn])
+	_check(row2.get_child_count() == 4, "pack_row con 2 botones: preview + info + 2 btns (got %d)" % row2.get_child_count())
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():

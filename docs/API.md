@@ -26,7 +26,7 @@ El flujo de datos entre hubs y la escena de juego pasa por **LevelQueue**
 |-------|-------|
 | `application/config/name` | `TumbleBoy Reborn` |
 | `application/run/main_scene` | `res://scenes/MainMenu.tscn` |
-| `application/config/icon` | `res://icon.svg` |
+| `application/config/icon` | `res://assets/tumbleboy/icon.png` |
 | `display/window/size` | 1200×825, stretch `2d`, aspect `keep` |
 | `rendering/quality/driver` | `GLES2` |
 
@@ -87,6 +87,12 @@ Packs descargados:
 
 - `mark_pack_downloaded(id)` / `is_pack_downloaded(id)` / `is_pack_local(id)`
   (`is_pack_local` = NO descargado desde la tienda, p. ej. packs propios).
+- `clear_pack(id)` — elimina el pack de downloaded_packs y games.
+
+Borrador del editor (un solo borrador activo):
+
+- `has_draft() -> bool`, `get_draft() -> Dictionary`, `save_draft(data)`, `clear_draft()`
+- Guardado automático continuo (~2-3 s). Se limpia al crear/Abrir/Guardar con éxito.
 
 Utilidades: `reset_all()` (borra todo el guardado), `_load()`/`_save()`
 (re-lectura/escritura del JSON; útil en tests).
@@ -100,7 +106,8 @@ Formato de `save_slots.json`:
     "story":   [ null, {"mode":"story","id":"historia","completed":3,"total":21,"updated":1712345678}, null ],
     "pack:abc":[ null, null, null ]
   },
-  "downloaded_packs": ["abc"]
+  "downloaded_packs": ["abc"],
+  "draft": { "map": [[1,2]], "attributes": {"theme":"default"}, "current_file": "", "read_only": false, "updated": 123 }
 }
 ```
 
@@ -225,6 +232,7 @@ Métodos públicos usados por `EditorHub`:
 
 - `open_file(path)` — carga un nivel existente (equivale a `_on_open_selected`).
 - `open_pack_panel()` — abre el panel de creación de packs (equivale a `_on_open_pack`).
+- `open_draft()` — restaura el borrador guardado (equivale a `_load_draft`).
 
 Otros destacados:
 
@@ -256,6 +264,8 @@ Lector de packs (estático). `const PACKS_DIR := "user://tumbleboy_packs/"`.
 - `list_level_filenames(zip_path) -> Array`.
 - `extract_pack(zip_path, dest_dir) -> Array` — extrae los niveles a `dest_dir`
   y devuelve sus rutas (juego temporal para un pack).
+- `get_thumbnail_texture(zip_path) -> Texture` — carga `thumbnail.png` del ZIP como textura (o `null`).
+- `remove_pack(id) -> bool` — elimina el ZIP del pack.
 
 ### zip_reader.gd / zip_writer.gd
 
@@ -265,7 +275,15 @@ build de Godot). Formato ZIP clásico, sin compresión (store).
 - `ZipReader.get_files(zip_path) -> Array`.
 - `ZipReader.read_file(zip_path, file_name) -> PoolByteArray`.
 - `ZipWriter.write_pack_zip(zip_path, files: Dictionary) -> bool` — `files` es
-  `{ "ruta/en/zip": "contenido" }`.
+  `{ "ruta/en/zip": contenido }` donde contenido puede ser `String` o `PoolByteArray`
+  (para imágenes PNG embebidas).
+
+### pack_row.gd
+
+Builder compartido de filas de packs (HBoxContainer con preview + info + botones).
+Usado por `packs_community.gd` (descargados) y `editor_hub.gd` (propios).
+
+- `PackRow.make(pack: Dictionary, thumb: Texture, buttons: Array) -> HBoxContainer`
 
 ### pack_store.gd
 
@@ -344,32 +362,40 @@ Selector de zócalos genérico (historia y packs).
 Packs comunitarios: menú → **Packs descargados** / **Packs online** / Volver.
 
 - Crea su propia instancia de `pack_store.gd` y la conecta.
-- `_refresh_descargados()` — lista packs locales (`PackReader.list_packs()`);
-  cada pack abre su `SlotPicker` (`configure("pack", id, "new")`).
+- `_refresh_descargados()` — lista packs locales con `PackRow` (Jugar + Desinstalar).
 - `_on_open_online()` — `store.refresh_index()`; `_render_online()` pinta cada
   pack con thumbnail (64×64), nombre, autor, descripción y botón
   Descargar/Instalado.
 - `_on_download(e)` — abre `ConfirmationDialog` ("¿Descargar el pack X?"); al
   confirmar llama a `store.download_pack(e)`.
+- `_on_uninstall(id)` — abre `ConfirmationDialog` para desinstalar; al confirmar
+  llama `PackReader.remove_pack(id)` + `SaveData.clear_pack(id)` y refresca.
 - `_on_pack_downloaded(id, ok, msg)` — si ok: `SaveData.mark_pack_downloaded(id)`
   y re-renderiza.
 - Variables: `store`, `menu_panel`, `descargados_panel`, `online_panel`,
   `desc_vbox`, `online_vbox`, `online_status`, `entries`, `download_dialog`,
-  `pending_download`.
+  `uninstall_dialog`, `pending_download`, `pending_uninstall`.
 
 ### editor_hub.gd
 
-Editor de niveles: **Niveles propios** / **Packs propios** / **Nuevo nivel** / Volver.
+Editor de niveles: **Niveles propios** (con Borrador arriba si existe) / **Packs propios** / **Nuevo nivel** / Volver.
 
 - `_list_user_levels() -> Array` — `.txt` en `user://tumbleboy_levels/`.
+- `_refresh_niveles()` — muestra Borrador (si existe: Editar/Eliminar) y debajo
+  cada nivel con nombre/autor/instrucciones + Jugar/Editar/Eliminar.
 - `_on_play_level(path, display)` — `LevelQueue.play_levels([path], display, "level")`
   y `change_scene("res://scenes/TumbleBoy.tscn")` (quick play, sin guardado).
 - `_on_edit_level(path)` — abre el editor y llama `editor.open_file(path)`.
+- `_on_edit_draft()` — abre el editor con `NavParams.open_draft = true`.
+- `_on_delete_draft()` — `SaveData.clear_draft()` y refresca.
+- `_on_delete_level(path, display)` — `ConfirmationDialog` → `dir.remove(path)`.
+- `_refresh_packs()` — packs propios con `PackRow` (Jugar + Eliminar).
 - `_on_play_pack(p)` — abre `SlotPicker` con `configure("pack", id, "new")`.
+- `_on_delete_pack(id)` — `ConfirmationDialog` → `PackReader.remove_pack(id)` y refresca.
 - `_on_create_pack()` — abre el editor y llama `editor.open_pack_panel()`.
 - `_on_new_level()` — abre el editor vacío.
 - Variables: `hub_panel`, `niveles_panel`, `packs_panel`, `niveles_vbox`,
-  `packs_vbox`.
+  `packs_vbox`, `delete_dialog`, `pending_delete`.
 
 ### ui_fonts.gd
 

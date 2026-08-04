@@ -42,7 +42,7 @@ static func _cd_le32(cd: Array, v: int):
 	cd.append((v >> 16) & 0xff)
 	cd.append((v >> 24) & 0xff)
 
-# files: { "ruta/dentro.zip": "contenido texto", ... }
+# files: { "ruta/dentro.zip": "contenido texto o PoolByteArray", ... }
 static func write_pack_zip(zip_path: String, files: Dictionary) -> bool:
 	var f := File.new()
 	if f.open(zip_path, File.WRITE) != OK:
@@ -52,7 +52,8 @@ static func write_pack_zip(zip_path: String, files: Dictionary) -> bool:
 	var local_offset := 0
 	var count := 0
 	for name in files:
-		var data: PoolByteArray = str(files[name]).to_utf8()
+		var raw = files[name]
+		var data: PoolByteArray = raw if raw is PoolByteArray else str(raw).to_utf8()
 		var name_b: PoolByteArray = name.to_utf8()
 		var crc := crc32(data)
 

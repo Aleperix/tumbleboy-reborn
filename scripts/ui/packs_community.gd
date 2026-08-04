@@ -4,6 +4,7 @@ extends Control
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
+const PackRow = preload("res://scripts/ui/pack_row.gd")
 
 var store: Node
 var menu_panel: Control
@@ -15,7 +16,9 @@ var online_status: Label
 var entries: Array = []
 var pack_buttons: Dictionary = {}
 var download_dialog: ConfirmationDialog
+var uninstall_dialog: ConfirmationDialog
 var pending_download: Dictionary = {}
+var pending_uninstall: String = ""
 var menu_buttons: Array = []
 var desc_back: Button
 var online_refresh: Button
@@ -184,18 +187,20 @@ func _refresh_descargados():
 		desc_vbox.add_child(l)
 		return
 	for p in packs:
-		var label: String = p.get("name", "?")
-		if p.has("author") and String(p.get("author", "")) != "":
-			label += "  —  " + str(p.get("author", ""))
-		var b := Button.new()
-		b.text = label
-		b.focus_mode = Control.FOCUS_ALL
-		b.rect_min_size = Vector2(560, 44)
-		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		b.add_font_override("font", UIFonts.make_font(16))
-		b.add_color_override("font_color", Color(0.95, 0.93, 0.88))
-		b.connect("pressed", self, "_on_pack_play", [p])
-		desc_vbox.add_child(b)
+		var id: String = str(p.get("id", ""))
+		var thumb = PackReader.get_thumbnail_texture(PackReader.PACKS_DIR + id + ".zip")
+		var play_btn := Button.new()
+		play_btn.text = "Jugar"
+		play_btn.add_font_override("font", UIFonts.make_font(14))
+		play_btn.rect_min_size = Vector2(100, 36)
+		play_btn.connect("pressed", self, "_on_pack_play", [p])
+		var uninstall_btn := Button.new()
+		uninstall_btn.text = "Desinstalar"
+		uninstall_btn.add_font_override("font", UIFonts.make_font(14))
+		uninstall_btn.rect_min_size = Vector2(120, 36)
+		uninstall_btn.connect("pressed", self, "_on_uninstall", [id])
+		var row = PackRow.make(p, thumb, [play_btn, uninstall_btn])
+		desc_vbox.add_child(row)
 
 func _on_pack_play(p: Dictionary):
 	var id: String = str(p.get("id", ""))
@@ -416,6 +421,26 @@ func _on_download_confirmed():
 	if pending_download.size() > 0:
 		store.download_pack(pending_download)
 	pending_download = {}
+
+func _on_uninstall(id: String):
+	pending_uninstall = id
+	if uninstall_dialog == null:
+		uninstall_dialog = ConfirmationDialog.new()
+		uninstall_dialog.window_title = "Desinstalar pack"
+		uninstall_dialog.get_ok().text = "Desinstalar"
+		uninstall_dialog.get_cancel().text = "Cancelar"
+		uninstall_dialog.connect("confirmed", self, "_on_uninstall_confirmed")
+		add_child(uninstall_dialog)
+	uninstall_dialog.dialog_text = "¿Desinstalar el pack '" + id + "'?\nSe eliminarán todos sus niveles."
+	uninstall_dialog.popup_centered()
+
+func _on_uninstall_confirmed():
+	if pending_uninstall == "":
+		return
+	PackReader.remove_pack(pending_uninstall)
+	SaveData.clear_pack(pending_uninstall)
+	pending_uninstall = ""
+	_refresh_descargados()
 
 func _on_pack_downloaded(id: String, ok: bool, msg: String):
 	if ok:

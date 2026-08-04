@@ -3,6 +3,8 @@ extends Control
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
+const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
+const PackRow = preload("res://scripts/ui/pack_row.gd")
 const USER_LEVELS_DIR := "user://tumbleboy_levels/"
 
 var hub_panel: Control
@@ -14,6 +16,8 @@ var hub_buttons: Array = []
 var niveles_back: Button
 var packs_create: Button
 var packs_back: Button
+var delete_dialog: ConfirmationDialog
+var pending_delete: String = ""
 
 func _ready():
 	_build_ui()
@@ -172,8 +176,34 @@ func _build_niveles():
 func _refresh_niveles():
 	for ch in niveles_vbox.get_children():
 		ch.queue_free()
+	if SaveData.has_draft():
+		var draft_label := Label.new()
+		draft_label.text = "Borrador"
+		draft_label.add_font_override("font", UIFonts.make_font(18, true))
+		draft_label.add_color_override("font_color", Color(0.95, 0.8, 0.4))
+		draft_label.align = Label.ALIGN_CENTER
+		niveles_vbox.add_child(draft_label)
+		var draft_hb := HBoxContainer.new()
+		draft_hb.alignment = BoxContainer.ALIGN_CENTER
+		draft_hb.add_constant_override("separation", 8)
+		var draft_edit_btn := Button.new()
+		draft_edit_btn.text = "Editar borrador"
+		draft_edit_btn.rect_min_size = Vector2(160, 36)
+		draft_edit_btn.add_font_override("font", UIFonts.make_font(14))
+		draft_edit_btn.connect("pressed", self, "_on_edit_draft")
+		draft_hb.add_child(draft_edit_btn)
+		var draft_del_btn := Button.new()
+		draft_del_btn.text = "Eliminar borrador"
+		draft_del_btn.rect_min_size = Vector2(160, 36)
+		draft_del_btn.add_font_override("font", UIFonts.make_font(14))
+		draft_del_btn.connect("pressed", self, "_on_delete_draft")
+		draft_hb.add_child(draft_del_btn)
+		niveles_vbox.add_child(draft_hb)
+		var spacer := Control.new()
+		spacer.rect_min_size = Vector2(0, 12)
+		niveles_vbox.add_child(spacer)
 	var files := _list_user_levels()
-	if files.size() == 0:
+	if files.size() == 0 and not SaveData.has_draft():
 		var l := Label.new()
 		l.text = "(no tienes niveles creados — usa 'Nuevo nivel' para crear uno)"
 		l.add_font_override("font", UIFonts.make_font(15))
@@ -182,34 +212,54 @@ func _refresh_niveles():
 		niveles_vbox.add_child(l)
 		return
 	for path in files:
+		var info = LevelsScript.parse_level(path)
 		var fname: String = path.get_file()
-		var hb := HBoxContainer.new()
-		hb.alignment = BoxContainer.ALIGN_CENTER
-		hb.add_constant_override("separation", 8)
-
-		var lbl := Label.new()
-		lbl.text = fname.get_basename()
-		lbl.add_font_override("font", UIFonts.make_font(16))
-		lbl.add_color_override("font_color", Color(0.95, 0.95, 0.98))
-		hb.add_child(lbl)
-
+		var display_name: String = info["attributes"].get("name", fname.get_basename())
+		var author: String = info["attributes"].get("author", "")
+		var instructions: String = info["attributes"].get("instructions", "")
+		var row := VBoxContainer.new()
+		row.add_constant_override("separation", 2)
+		var name_label := Label.new()
+		name_label.text = display_name
+		name_label.add_font_override("font", UIFonts.make_font(16, true))
+		name_label.add_color_override("font_color", Color(0.95, 0.9, 0.6))
+		row.add_child(name_label)
+		if author != "":
+			var author_label := Label.new()
+			author_label.text = author
+			author_label.add_font_override("font", UIFonts.make_font(12))
+			author_label.add_color_override("font_color", Color(0.6, 0.6, 0.7))
+			row.add_child(author_label)
+		if instructions != "":
+			var instr_label := Label.new()
+			instr_label.text = instructions
+			instr_label.autowrap = true
+			instr_label.rect_min_size = Vector2(480, 0)
+			instr_label.add_font_override("font", UIFonts.make_font(12))
+			instr_label.add_color_override("font_color", Color(0.5, 0.5, 0.6))
+			row.add_child(instr_label)
+		var btn_hb := HBoxContainer.new()
+		btn_hb.add_constant_override("separation", 6)
 		var play_btn := Button.new()
 		play_btn.text = "Jugar"
-		play_btn.focus_mode = Control.FOCUS_ALL
 		play_btn.rect_min_size = Vector2(80, 32)
 		play_btn.add_font_override("font", UIFonts.make_font(14))
-		play_btn.connect("pressed", self, "_on_play_level", [path, fname.get_basename()])
-		hb.add_child(play_btn)
-
+		play_btn.connect("pressed", self, "_on_play_level", [path, display_name])
+		btn_hb.add_child(play_btn)
 		var edit_btn := Button.new()
 		edit_btn.text = "Editar"
-		edit_btn.focus_mode = Control.FOCUS_ALL
 		edit_btn.rect_min_size = Vector2(80, 32)
 		edit_btn.add_font_override("font", UIFonts.make_font(14))
 		edit_btn.connect("pressed", self, "_on_edit_level", [path])
-		hb.add_child(edit_btn)
-
-		niveles_vbox.add_child(hb)
+		btn_hb.add_child(edit_btn)
+		var del_btn := Button.new()
+		del_btn.text = "Eliminar"
+		del_btn.rect_min_size = Vector2(80, 32)
+		del_btn.add_font_override("font", UIFonts.make_font(14))
+		del_btn.connect("pressed", self, "_on_delete_level", [path, display_name])
+		btn_hb.add_child(del_btn)
+		row.add_child(btn_hb)
+		niveles_vbox.add_child(row)
 
 func _list_user_levels() -> Array:
 	var result := []
@@ -232,6 +282,39 @@ func _on_play_level(path: String, display: String):
 func _on_edit_level(path: String):
 	NavParams.open_file = path
 	get_tree().change_scene("res://scenes/TumbleBoyEditor.tscn")
+
+func _on_edit_draft():
+	NavParams.open_draft = true
+	get_tree().change_scene("res://scenes/TumbleBoyEditor.tscn")
+
+func _on_delete_draft():
+	SaveData.clear_draft()
+	_refresh_niveles()
+
+var _pending_delete_path: String = ""
+var _pending_delete_display: String = ""
+
+func _on_delete_level(path: String, display: String):
+	_pending_delete_path = path
+	_pending_delete_display = display
+	if delete_dialog == null:
+		delete_dialog = ConfirmationDialog.new()
+		delete_dialog.window_title = "Eliminar nivel"
+		delete_dialog.get_ok().text = "Eliminar"
+		delete_dialog.get_cancel().text = "Cancelar"
+		delete_dialog.connect("confirmed", self, "_on_delete_level_confirmed")
+		add_child(delete_dialog)
+	delete_dialog.dialog_text = "¿Eliminar el nivel '" + display + "'?\nEsta acción no se puede deshacer."
+	delete_dialog.popup_centered()
+
+func _on_delete_level_confirmed():
+	if _pending_delete_path == "":
+		return
+	var dir := Directory.new()
+	dir.remove(_pending_delete_path)
+	_pending_delete_path = ""
+	_pending_delete_display = ""
+	_refresh_niveles()
 
 # --- Packs propios ---
 
@@ -313,31 +396,44 @@ func _refresh_packs():
 		packs_vbox.add_child(l)
 		return
 	for p in local:
-		var label: String = p.get("name", "?")
-		var hb := HBoxContainer.new()
-		hb.alignment = BoxContainer.ALIGN_CENTER
-		hb.add_constant_override("separation", 8)
-
-		var lbl := Label.new()
-		lbl.text = label
-		lbl.add_font_override("font", UIFonts.make_font(16))
-		lbl.add_color_override("font_color", Color(0.95, 0.95, 0.98))
-		hb.add_child(lbl)
-
+		var id: String = str(p.get("id", ""))
+		var thumb = PackReader.get_thumbnail_texture(PackReader.PACKS_DIR + id + ".zip")
 		var play_btn := Button.new()
 		play_btn.text = "Jugar"
-		play_btn.focus_mode = Control.FOCUS_ALL
-		play_btn.rect_min_size = Vector2(80, 32)
+		play_btn.rect_min_size = Vector2(100, 36)
 		play_btn.add_font_override("font", UIFonts.make_font(14))
 		play_btn.connect("pressed", self, "_on_play_pack", [p])
-		hb.add_child(play_btn)
-
-		packs_vbox.add_child(hb)
+		var del_btn := Button.new()
+		del_btn.text = "Eliminar"
+		del_btn.rect_min_size = Vector2(100, 36)
+		del_btn.add_font_override("font", UIFonts.make_font(14))
+		del_btn.connect("pressed", self, "_on_delete_pack", [id])
+		var row = PackRow.make(p, thumb, [play_btn, del_btn])
+		packs_vbox.add_child(row)
 
 func _on_play_pack(p: Dictionary):
 	var id: String = str(p.get("id", ""))
 	NavParams.pending_picker = ["pack", id, "new"]
 	get_tree().change_scene("res://scenes/SlotPicker.tscn")
+
+func _on_delete_pack(id: String):
+	pending_delete = id
+	if delete_dialog == null:
+		delete_dialog = ConfirmationDialog.new()
+		delete_dialog.window_title = "Eliminar pack"
+		delete_dialog.get_ok().text = "Eliminar"
+		delete_dialog.get_cancel().text = "Cancelar"
+		delete_dialog.connect("confirmed", self, "_on_delete_pack_confirmed")
+		add_child(delete_dialog)
+	delete_dialog.dialog_text = "¿Eliminar el pack '" + id + "'?\nSe eliminará el archivo ZIP y todos sus niveles."
+	delete_dialog.popup_centered()
+
+func _on_delete_pack_confirmed():
+	if pending_delete == "":
+		return
+	PackReader.remove_pack(pending_delete)
+	pending_delete = ""
+	_refresh_packs()
 
 func _on_create_pack():
 	NavParams.open_pack_panel = true

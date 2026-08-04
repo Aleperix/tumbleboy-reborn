@@ -7,8 +7,10 @@ extends Node
 var pending_picker: Array = []   # [mode, id, intent] para SlotPicker
 var open_file: String = ""       # archivo a abrir en TumbleBoyEditor
 var open_pack_panel: bool = false # abrir el panel de packs en TumbleBoyEditor
+var open_draft: bool = false     # abrir el borrador del editor
 
 func clear():
 	pending_picker = []
 	open_file = ""
 	open_pack_panel = false
+	open_draft = false
