@@ -43,6 +43,7 @@ func _build_ui():
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
+	col.rect_min_size = Vector2(640, 0)
 	center.add_child(col)
 
 	var title := Label.new()
