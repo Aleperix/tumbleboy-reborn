@@ -308,7 +308,10 @@ Señales:
 
 Métodos:
 
-- `refresh_index()` — descarga `packs/index.json` (GitHub Contents API) con ETag/304.
+- `refresh_index()` — muestra la caché al instante si existe (`index_updated`
+  con `from_cache=true`) y en paralelo descarga `packs/index.json` (GitHub
+  Contents API) con ETag/304; si la red falla o hay rate-limit, la lista
+  queda visible desde la caché.
 - `get_cached_index() -> Array`.
 - `is_pack_installed(id) -> bool` — ¿existe el ZIP en `user://tumbleboy_packs/`?
 - `download_pack(entry: Dictionary)` — descarga el ZIP y lo guarda.

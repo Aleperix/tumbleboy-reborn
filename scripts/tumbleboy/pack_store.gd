@@ -39,10 +39,11 @@ func get_cached_index() -> Array:
 		return parsed
 	return []
 
-# Refresca el index: devuelve la caché al instante si existe, y en paralelo
+# Refresca el index: muestra la caché al instante si existe, y en paralelo
 # consulta GitHub con ETag; si el repo no cambió (304) no vuelve a descargar.
 func refresh_index():
 	if _pending != "":
+		_emit_cached_index()
 		return
 	var etag := _read_text(CACHE_DIR + "index_etag.txt").strip_edges()
 	var headers := PoolStringArray(["Accept: application/vnd.github.raw+json"])
@@ -50,9 +51,16 @@ func refresh_index():
 		headers.append("If-None-Match: " + etag)
 	var err := http.request(API_INDEX_URL, headers, true, HTTPClient.METHOD_GET)
 	if err != OK:
+		_emit_cached_index()
 		emit_signal("index_error", "No se pudo iniciar la consulta")
 		return
 	_pending = "index"
+	_emit_cached_index()
+
+func _emit_cached_index():
+	var cached := get_cached_index()
+	if cached.size() > 0:
+		emit_signal("index_updated", cached, true)
 
 func is_pack_installed(id: String) -> bool:
 	var f := File.new()
