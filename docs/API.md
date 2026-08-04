@@ -441,6 +441,7 @@ dispositivos táctiles.
 | `TumbleBoyEditor.tscn` | Editor visual |
 | `TouchControls.tscn` | Controles táctiles (añadida en TumbleBoy) |
 | `SmokeTest.tscn` | Test headless (raíz `tests/smoke_test.gd`) |
+| `PackLevelsTest.tscn` | Test de packs headless (raíz `tests/pack_levels_test.gd`) |
 
 ## Directorios `user://`
 
@@ -469,8 +470,12 @@ El índice online `packs/index.json` del repo:
 
 ```json
 [
-  { "id": "primer_contacto", "name": "Primer contacto", "author": "Aleperix",
-    "description": "...", "thumbnail": "packs/primer_contacto.png" }
+  { "id": "numeros", "name": "Números", "author": "Aleperix",
+    "description": "Los números pares del 0 al 10 en trazos de neón.",
+    "thumbnail": "packs/numeros.png" },
+  { "id": "letras", "name": "Letras", "author": "Aleperix",
+    "description": "Las letras de la B a la Z en trazos de neón.",
+    "thumbnail": "packs/letras.png" }
 ]
 ```
 
@@ -483,6 +488,12 @@ Ver `packs/README.md` para el flujo completo de creación y aporte.
   zócalos de SaveData, LevelQueue, StoryHub, SlotPicker, PacksCommunity,
   EditorHub y MainMenu. Resultado: `SMOKE TEST: ALL PASS`.
 - **`tests/online_test.gd`** (`res://tests/OnlineTest.tscn`, requiere red y
-  ventana): índice (3 packs), descarga, ETag/304, thumbnail.
+  ventana): índice (2 packs), descarga, ETag/304, thumbnail.
+- **`tests/pack_levels_test.gd`** (`res://tests/PackLevelsTest.tscn`, headless):
+  lee los packs de `res://packs/*.zip` con el `PackReader` y valida cada nivel
+  (1 inicio, ≥1 meta, meta alcanzable por BFS, filas iguales, thumbnail PNG).
 - **`tests/verify_packs.gd`**, **`tests/make_packs.gd`**,
   **`tests/make_sample_pack.gd`** — utilidades de mantenimiento de `packs/`.
+- **`tools/gen_packs.py`** — genera los packs `Números` y `Letras` (glifo neón
+  renderizado con PIL → contorno 3 tiles → puentes para bucles → BFS →
+  zip store) y sus thumbnails.

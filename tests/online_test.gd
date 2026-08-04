@@ -18,8 +18,8 @@ func _ready():
 	# comprobación "no instalado" sea determinista.
 	var dir := Directory.new()
 	if dir.open("user://tumbleboy_packs") == OK:
-		dir.remove("primer_contacto.zip")
-		dir.remove("primer_contacto.zip.tmp")
+		dir.remove("numeros.zip")
+		dir.remove("numeros.zip.tmp")
 	store = preload("res://scripts/tumbleboy/pack_store.gd").new()
 	add_child(store)
 	store.connect("index_updated", self, "_on_index")
@@ -41,16 +41,16 @@ func _on_index_err(msg: String):
 
 func _on_index(list: Array, from_cache: bool):
 	print("  index_updated (cache=%s) entries=%d" % [str(from_cache), list.size()])
-	_check(list.size() == 3, "3 packs en el índice (hay %d)" % list.size())
-	if list.size() != 3:
+	_check(list.size() == 2, "2 packs en el índice (hay %d)" % list.size())
+	if list.size() != 2:
 		_finish()
 		return
 	var e: Dictionary = list[0]
 	_entry = e
 	print("  entrada: id=%s name=%s author=%s" % [str(e.get("id")), str(e.get("name")), str(e.get("author"))])
-	_check(e.get("name") == "Primer contacto", "nombre del pack")
+	_check(e.get("name") == "Números", "nombre del pack")
 	_check(e.get("author") == "Aleperix", "autor del pack")
-	_check(store.is_pack_installed("primer_contacto") == false, "pack aún no instalado")
+	_check(store.is_pack_installed("numeros") == false, "pack aún no instalado")
 	store.download_pack(e)
 
 func _on_pack(id: String, ok: bool, msg: String):
@@ -62,11 +62,11 @@ func _on_pack(id: String, ok: bool, msg: String):
 		var packs = PackReader.list_packs()
 		var found := false
 		for p in packs:
-			if p.get("name") == "Primer contacto":
+			if p.get("name") == "Números":
 				found = true
 				print("  manifest: name=%s author=%s" % [str(p.get("name")), str(p.get("author"))])
 		_check(found, "manifest del pack leído")
-		var lvl = PackReader.get_level_text("user://tumbleboy_packs/" + id + ".zip", "levels/01-Introduction.txt")
+		var lvl = PackReader.get_level_text("user://tumbleboy_packs/" + id + ".zip", "levels/01.txt")
 		_check(lvl.length() > 0, "nivel del pack leído del ZIP")
 	_pack_ok = true
 	if _pack_ok and not done:

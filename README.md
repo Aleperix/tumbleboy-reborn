@@ -52,7 +52,8 @@ scenes/                Escenas .tscn (MainMenu, hubs, SlotPicker, TumbleBoy, edi
 scripts/tumbleboy/     Gameplay + editor + packs (lector/escritor ZIP, store)
 scripts/ui/            Hubs y menús con foco D-pad
 autoload/              AudioManager, SaveData, InputManager, LevelQueue
-tests/                 SmokeTest (headless) + OnlineTest (requiere red)
+tests/                 SmokeTest (headless) + OnlineTest (requiere red) + PackLevelsTest
+tools/                 gen_packs.py (genera los packs Números y Letras)
 icon.svg               Icono de la aplicación (bola TumbleBoy)
 ```
 
@@ -63,6 +64,9 @@ Documentación: empieza en [docs/README.md](docs/README.md).
 ```sh
 # Smoke test (headless, sin red): niveles, física, editor, zócalos, hubs, menú
 godot3 --headless --path . res://scenes/SmokeTest.tscn
+
+# Pack test (headless, sin red): cada nivel de packs/ es jugable (BFS)
+godot3 --headless --path . res://tests/PackLevelsTest.tscn
 
 # Online test (requiere red): índice de packs, ETag/caché, descarga, thumbnail
 godot3 --path . res://tests/OnlineTest.tscn

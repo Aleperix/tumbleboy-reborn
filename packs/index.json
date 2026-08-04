@@ -1,23 +1,16 @@
 [
   {
-    "id": "primer_contacto",
-    "name": "Primer contacto",
+    "id": "numeros",
+    "name": "Números",
     "author": "Aleperix",
-    "description": "Nivel de ejemplo del repo para probar la descarga de packs.",
-    "thumbnail": "packs/primer_contacto.png"
+    "description": "Los números pares del 0 al 10 en trazos de neón.",
+    "thumbnail": "packs/numeros.png"
   },
   {
-    "id": "introduccion_rapida",
-    "name": "Introducción rápida",
+    "id": "letras",
+    "name": "Letras",
     "author": "Aleperix",
-    "description": "Los primeros pasos: los 4 niveles iniciales del original, para quien empieza.",
-    "thumbnail": "packs/introduccion_rapida.png"
-  },
-  {
-    "id": "la_recta_final",
-    "name": "La recta final",
-    "author": "Aleperix",
-    "description": "Los últimos 5 niveles del original: trucos, huecos y espirales.",
-    "thumbnail": "packs/la_recta_final.png"
+    "description": "Las letras de la B a la Z en trazos de neón.",
+    "thumbnail": "packs/letras.png"
   }
 ]

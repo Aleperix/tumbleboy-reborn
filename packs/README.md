@@ -4,6 +4,20 @@ Aquí viven los packs de niveles que se pueden descargar desde el juego
 (Menú → **Packs comunitarios → Packs online**). El juego lee `index.json`
 de esta carpeta y descarga los ZIP a `user://tumbleboy_packs/`.
 
+Packs actuales:
+
+| id | Niveles | Generador |
+|----|---------|-----------|
+| `numeros` | `0, 2, 4, 6, 8, 10` (6) | `tools/gen_packs.py` |
+| `letras`  | `B, D, F, H, J, L, N, P, R, T, V, X, Z` (13) | `tools/gen_packs.py` |
+
+`tools/gen_packs.py` renderiza cada glifo con DejaVuSans-Bold y genera un nivel
+cuyo corredor traza el contorno "neón" del glifo (2-3 tiles de ancho, ojos
+interiores unidos con puentes, inicio y meta en los extremos más lejanos y un
+bumper + una rampa como decoración fácil). Emite los ZIP, las miniaturas PNG y
+`index.json`. Los niveles se validan con `tests/PackLevelsTest.tscn` (BFS de
+meta alcanzable).
+
 ## Cómo funciona un pack
 
 Un pack es un ZIP (compresión store, sin encriptar) con esta estructura:

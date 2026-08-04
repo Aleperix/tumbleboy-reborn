@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://tests/pack_levels_test.gd" type="Script" id="1"]
+
+[node name="PackLevelsTest" type="Node2D"]
+script = ExtResource( 1 )
