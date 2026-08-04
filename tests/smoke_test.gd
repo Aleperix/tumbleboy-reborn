@@ -9,8 +9,12 @@ const BallScript = preload("res://scripts/tumbleboy/ball.gd")
 const TumbleBoyScript = preload("res://scripts/tumbleboy/tumbleboy.gd")
 const TumbleBoyScene = preload("res://scenes/TumbleBoy.tscn")
 const EditorScene = preload("res://scenes/TumbleBoyEditor.tscn")
-const LevelSelectScene = preload("res://scenes/LevelSelect.tscn")
 const MainMenuScene = preload("res://scenes/MainMenu.tscn")
+const StoryHubScene = preload("res://scenes/StoryHub.tscn")
+const SlotPickerScene = preload("res://scenes/SlotPicker.tscn")
+const PacksCommunityScene = preload("res://scenes/PacksCommunity.tscn")
+const EditorHubScene = preload("res://scenes/EditorHub.tscn")
+const CreditsScene = preload("res://scenes/Credits.tscn")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const ZipWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
 const ZipReader = preload("res://scripts/tumbleboy/zip_reader.gd")
@@ -24,8 +28,18 @@ func _ready():
 	_test_scene()
 	_test_editor()
 	_test_zip()
-	_test_level_select()
+	_test_save_slots()
+	_test_level_queue()
+	_test_story_hub()
+	_test_slot_picker()
+	_test_packs_community()
+	_test_editor_hub()
 	_test_main_menu()
+	_test_credits()
+	yield(get_tree(), "idle_frame")
+	yield(_test_navigation(), "completed")
+	yield(get_tree(), "idle_frame")
+	_test_focus()
 	if failures == 0:
 		print("SMOKE TEST: ALL PASS")
 	else:
@@ -147,8 +161,8 @@ func _test_editor():
 	print("== editor ==")
 	var ed = EditorScene.instance()
 	add_child(ed)
-	_check(ed.map.size() == 5 and ed.map[0].size() == 12, "nuevo nivel es 5x12")
-	_check(ed.board.width == 12 and ed.board.height == 5, "board con dimensiones lógicas (12x5)")
+	_check(ed.map.size() == 12 and ed.map[0].size() == 20, "nuevo nivel es 20x12")
+	_check(ed.board.width == 20 and ed.board.height == 12, "board con dimensiones lógicas (20x12)")
 	ed._paint_cell(3, 2, false)
 	_check(ed.map[2][3] == C.BLOCK_FLOOR, "pintar piso en (3,2)")
 	_check(ed.board.block_at(3, 2) == C.BLOCK_FLOOR, "board refleja el bloque pintado")
@@ -217,6 +231,23 @@ func _test_editor():
 	_check(lvl["map"].size() > 0, "nivel del pack parseable")
 	var znames = PackReader.list_level_filenames("user://tumbleboy_packs/smoke_pack.zip")
 	_check(znames.size() == 1 and znames[0] == "levels/smoke_pack_level.txt", "get_files del ZIP")
+	ed._select_paint(C.BLOCK_START)
+	ed._paint_cell(1, 1, false)
+	ed._select_paint(C.BLOCK_GOAL)
+	ed._paint_cell(25, 16, false)
+	_check(ed.map.size() == 17 and ed.map[16].size() == 26, "pintar fuera de bordes amplía el mapa (got %dx%d)" % [ed.map[16].size(), ed.map.size()])
+	_check(ed.map[16][25] == C.BLOCK_GOAL, "bloque colocado fuera de los bordes iniciales")
+	_check(ed.board.width == 26 and ed.board.height == 17, "board crece con el mapa")
+	_check(ed._validate_map() == "", "meta lejos sigue válida (con $ y 1)")
+	ed._select_paint(C.BLOCK_FLOOR)
+	ed._paint_cell(50, 30, false)
+	var rows = ed.map.size()
+	var cols = 0
+	if rows > 0:
+		cols = ed.map[rows - 1].size()
+	_check(rows == 31 and cols == 51, "crecimiento dentro del tope llega a 51x31 (got %dx%d)" % [cols, rows])
+	ed._paint_cell(70, 50, false)
+	_check(ed.map.size() == 31 and ed.map[30].size() == 51, "no crece más allá de GRID_MAX (60x40)")
 	ed.free()
 
 func _test_zip():
@@ -238,24 +269,148 @@ func _test_zip():
 	_check(b != null and b.get_string_from_utf8().find(".name {B}") >= 0, "read_file lee nivel con contenido")
 	dir.remove(zp)
 
-func _test_level_select():
-	print("== level select ==")
+func _backup_save() -> String:
+	var f := File.new()
+	if f.file_exists(SaveData.SAVE_PATH):
+		if f.open(SaveData.SAVE_PATH, File.READ) == OK:
+			var t := f.get_as_text()
+			f.close()
+			return t
+	return ""
+
+func _restore_save(text: String):
+	if text == "":
+		Directory.new().remove(SaveData.SAVE_PATH)
+	else:
+		var f := File.new()
+		if f.open(SaveData.SAVE_PATH, File.WRITE) == OK:
+			f.store_string(text)
+			f.close()
+	SaveData._load()
+
+func _test_save_slots():
+	print("== save slots ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	_check(SaveData.count_saves("story") == 0, "historia sin zócalos al inicio")
+	_check(SaveData.get_game_key("story", "historia") == "story", "clave historia = story")
+	_check(SaveData.get_game_key("pack", "mi_pack") == "pack:mi_pack", "clave pack = pack:<id>")
+	SaveData.begin_session("story", "historia", 0, 21, 0)
+	_check(SaveData.has_save("story", 0), "zócalo 0 de historia guardado")
+	_check(SaveData.count_saves("story") == 1, "1 zócalo ocupado (historia)")
+	SaveData.record_progress(3)
+	var info: Dictionary = SaveData.get_slot_info("story", 0)
+	_check(info.get("completed", -1) == 3, "record_progress actualiza completed (got %s)" % str(info.get("completed", -1)))
+	_check(not SaveData.has_save("pack:mi_pack", 0), "packs no comparten zócalos con historia")
+	SaveData.begin_session("pack", "mi_pack", 1, 8, 0)
+	_check(SaveData.has_save("pack:mi_pack", 1), "zócalo 1 del pack guardado independiente")
+	_check(SaveData.count_saves("story") == 1, "historia intacta tras guardar pack")
+	SaveData.end_session()
+	_check(SaveData.active_slot == -1 and SaveData.active_key == "", "end_session limpia sesión")
+	SaveData.clear_slot("story", 0)
+	_check(not SaveData.has_save("story", 0), "clear_slot libera zócalo")
+	SaveData.mark_pack_downloaded("x")
+	_check(SaveData.is_pack_downloaded("x") and not SaveData.is_pack_local("x"), "mark_pack_downloaded registra y is_pack_local lo ve")
+	SaveData.reset_all()
+	_restore_save(backup)
+
+func _test_level_queue():
+	print("== level queue ==")
 	LevelQueue.clear()
-	LevelQueue.play_levels(["user://a.txt", "user://b.txt"], "Prueba")
-	_check(LevelQueue.paths.size() == 2 and LevelQueue.return_scene == "res://scenes/LevelSelect.tscn", "LevelQueue guarda secuencia y vuelta al selector")
+	_check(LevelQueue.start_index == 0 and LevelQueue.mode == "story", "clear resetea start_index/mode")
+	LevelQueue.play_levels(["user://a.txt"], "P", "pack", "mi_pack")
+	_check(LevelQueue.mode == "pack" and LevelQueue.pack_id == "mi_pack", "play_levels guarda modo pack + id")
+	_check(LevelQueue.return_scene == "res://scenes/PacksCommunity.tscn", "pack vuelve a PacksCommunity")
+	LevelQueue.play_levels(["user://a.txt"], "P", "level")
+	_check(LevelQueue.return_scene == "res://scenes/EditorHub.tscn", "nivel suelto vuelve a EditorHub")
+	LevelQueue.play_levels([], "Historia", "story")
+	_check(LevelQueue.return_scene == "res://scenes/StoryHub.tscn", "historia vuelve a StoryHub")
 	LevelQueue.clear()
-	var ls = LevelSelectScene.instance()
-	add_child(ls)
-	_check(ls.store != null, "selector crea PackStore")
-	_check(ls.pack_buttons.has("smoke_pack"), "pack del editor visible en el selector")
-	var users = ls._list_user_levels()
-	_check(users.has("user://tumbleboy_levels/smoke_pack_level.txt"), "niveles de usuario listados")
-	var bcount := 0
-	for ch in ls.menu_vbox.get_children():
-		if ch is Button:
-			bcount += 1
-	_check(bcount >= 4, "menú del selector con botones (got %d)" % bcount)
-	ls.free()
+
+func _collect_texts(col: Node) -> Array:
+	var texts := []
+	for ch in col.get_children():
+		if ch.has_method("get_text") or ("text" in ch):
+			texts.append(ch.text)
+	return texts
+
+func _test_story_hub():
+	print("== story hub ==")
+	var sh = StoryHubScene.instance()
+	add_child(sh)
+	_check(sh.buttons.size() == 3, "StoryHub con 3 botones (got %d)" % sh.buttons.size())
+	_check(sh.buttons[0].text == "Nueva Partida", "botón Nueva Partida")
+	_check(sh.buttons[2].text.begins_with("Volver"), "botón Volver")
+	_check(sh.buttons[1].text.begins_with("Continuar"), "botón Continuar presente")
+	sh.free()
+
+func _test_slot_picker():
+	print("== slot picker ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	var sp = SlotPickerScene.instance()
+	add_child(sp)
+	_check(sp.slot_buttons.size() == SaveData.SLOT_COUNT, "3 zócalos visibles")
+	sp.configure("story", "historia", "new")
+	_check(sp.no_save_button != null, "intent=new muestra 'Sin guardado'")
+	_check(sp.slot_buttons[0].text.find("Vacío") >= 0, "zócalo vacío etiquetado")
+	SaveData.begin_session("story", "historia", 1, 21, 5)
+	sp.configure("story", "historia", "continue")
+	_check(sp.slot_buttons[1].text.find("nivel 6/21") >= 0, "continuar muestra nivel 6/21 en zócalo ocupado")
+	_check(sp.slot_buttons[2].disabled, "continuar deshabilita zócalo vacío")
+	SaveData.reset_all()
+	_restore_save(backup)
+	sp.free()
+
+func _test_packs_community():
+	print("== packs community ==")
+	var pc = PacksCommunityScene.instance()
+	add_child(pc)
+	_check(pc.store != null, "PackCommunity crea PackStore")
+	_check(pc.menu_panel != null and pc.descargados_panel != null and pc.online_panel != null, "3 paneles creados")
+	_check(pc.menu_panel.visible, "menú visible al inicio")
+	pc._on_open_descargados()
+	_check(pc.descargados_panel.visible, "abrir descargados conmuta panel")
+	pc._on_close_descargados()
+	_check(pc.menu_panel.visible, "volver restaura menú")
+	var row = pc._online_row({"id": "mi_pack", "name": "Mi Pack", "author": "alguien", "description": "desc"})
+	_check(row != null and row is Control, "online_row construye la fila sin errores")
+	pc.free()
+
+func _test_editor_hub():
+	print("== editor hub ==")
+	var eh = EditorHubScene.instance()
+	add_child(eh)
+	_check(eh.hub_panel != null and eh.niveles_panel != null and eh.packs_panel != null, "EditorHub con 3 paneles")
+	eh._on_open_niveles()
+	_check(eh.niveles_panel.visible, "abrir niveles propios conmuta panel")
+	eh._on_close_niveles()
+	eh._on_open_packs()
+	_check(eh.packs_panel.visible, "abrir packs propios conmuta panel")
+	eh._on_close_packs()
+	_check(eh.hub_panel.visible, "volver restaura hub")
+	eh.free()
+
+func _test_navigation():
+	print("== navigation ==")
+	NavParams.clear()
+	NavParams.pending_picker = ["pack", "mi_pack", "new"]
+	var sp = SlotPickerScene.instance()
+	get_tree().root.add_child(sp)
+	_check(sp.game_mode == "pack" and sp.game_id == "mi_pack", "SlotPicker consume NavParams (got %s/%s)" % [sp.game_mode, sp.game_id])
+	_check(sp.sub_label != null and sp.sub_label.text.find("mi_pack") >= 0, "subtítulo muestra el pack (got '%s')" % str(sp.sub_label.text if sp.sub_label else ""))
+	_check(sp.no_save_button != null and sp.no_save_button.visible, "intent new muestra 'Sin guardado'")
+	_check(NavParams.pending_picker.size() == 0, "NavParams consumido")
+	sp.free()
+
+	NavParams.open_file = "user://tumbleboy_levels/smoke_pack_level.txt"
+	var ed = EditorScene.instance()
+	get_tree().root.add_child(ed)
+	_check(NavParams.open_file == "", "NavParams.open_file consumido en _ready")
+	yield(get_tree(), "idle_frame")
+	_check(ed.current_file == "user://tumbleboy_levels/smoke_pack_level.txt", "editor abre el archivo pedido (got '%s')" % str(ed.current_file))
+	ed.free()
+	NavParams.clear()
 
 func _test_main_menu():
 	print("== main menu ==")
@@ -270,14 +425,77 @@ func _test_main_menu():
 					break
 	_check(col != null, "menú tiene VBoxContainer dentro de CenterContainer")
 	var texts := []
+	var has_icon := false
 	if col != null:
 		for ch in col.get_children():
-			if ch.has_method("get_text") or "text" in ch:
+			if ch is TextureRect:
+				has_icon = true
+			if ch.has_method("get_text") or ("text" in ch):
 				texts.append(ch.text)
-	_check(texts.size() == 6, "menú: título+subtítulo+3 botones+hint (got %d)" % texts.size())
+	_check(has_icon, "menú tiene icono (TextureRect) arriba")
 	_check(texts.has("TUMBLEBOY REBORN"), "título TumbleBoy presente")
-	_check(texts.has("Niveles y packs"), "botón Niveles y packs presente")
+	_check(texts.has("Modo historia"), "botón Modo historia presente")
+	_check(texts.has("Packs comunitarios"), "botón Packs comunitarios presente")
 	_check(texts.has("Editor de niveles"), "botón Editor de niveles presente")
-	_check(texts.has("Jugar — TumbleBoy (historia)"), "botón Jugar historia presente")
+	_check(texts.has("Créditos"), "botón Créditos presente")
+	_check(texts.has("Salir"), "botón Salir presente")
+	_check(texts.size() == 8, "8 textos: título+subtítulo+5 botones+hint (got %d)" % texts.size())
 	_check(ProjectSettings.get_setting("application/config/name") == "TumbleBoy Reborn", "nombre del proyecto = TumbleBoy Reborn")
 	mm.free()
+
+func _test_credits():
+	print("== credits ==")
+	var cr = CreditsScene.instance()
+	add_child(cr)
+	for expected in ["CRÉDITOS", "Aleperix", "TuPlanetXO", "Tom Corbet", "Chris Jackson", "Eben Myers", "Bob Rost", "Álvaro Benítez", "Gummi", "SugarLabs"]:
+		_check(_find_text(cr, expected), "créditos muestran '%s'" % expected)
+	var bb = _back_button_of(cr)
+	_check(bb != null, "créditos tienen botón Volver")
+	if bb != null:
+		_check(bb.text.find("Volver") >= 0, "botón de regreso etiquetado")
+	cr.free()
+
+func _find_text(root: Node, needle: String) -> bool:
+	for ch in root.get_children():
+		if ("text" in ch) and String(ch.text).find(needle) >= 0:
+			return true
+		if _find_text(ch, needle):
+			return true
+	return false
+
+func _back_button_of(root: Node) -> Control:
+	for ch in root.get_children():
+		if ch is Button:
+			return ch
+		var found := _back_button_of(ch)
+		if found != null:
+			return found
+	return null
+
+func _test_focus():
+	print("== focus ==")
+	var navs := []
+	var mm = MainMenuScene.instance()
+	get_tree().root.add_child(mm)
+	_check(mm.get_focus_owner() != null, "MainMenu toma el foco al arrancar")
+	navs.append(mm)
+	var sp = SlotPickerScene.instance()
+	get_tree().root.add_child(sp)
+	_check(sp.get_focus_owner() != null, "SlotPicker toma el foco al arrancar")
+	_check(sp.get_focus_owner() is Button, "foco inicial del SlotPicker en un botón")
+	navs.append(sp)
+	var pc = PacksCommunityScene.instance()
+	get_tree().root.add_child(pc)
+	_check(pc.get_focus_owner() != null, "PacksCommunity toma el foco al arrancar")
+	navs.append(pc)
+	var eh = EditorHubScene.instance()
+	get_tree().root.add_child(eh)
+	_check(eh.get_focus_owner() != null, "EditorHub toma el foco al arrancar")
+	navs.append(eh)
+	var cr = CreditsScene.instance()
+	get_tree().root.add_child(cr)
+	_check(cr.get_focus_owner() != null, "Credits toma el foco al arrancar")
+	navs.append(cr)
+	for n in navs:
+		n.free()
+	NavParams.clear()

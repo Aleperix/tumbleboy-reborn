@@ -1,7 +1,7 @@
 # Packs de la comunidad (TumbleBoy Reborn)
 
 Aquí viven los packs de niveles que se pueden descargar desde el juego
-(botón **Niveles y packs → Buscar packs online**). El juego lee `index.json`
+(Menú → **Packs comunitarios → Packs online**). El juego lee `index.json`
 de esta carpeta y descarga los ZIP a `user://tumbleboy_packs/`.
 
 ## Cómo funciona un pack
@@ -29,10 +29,10 @@ mi_pack.zip
 
 ## Cómo crear un pack
 
-1. Abre el **Editor de niveles** del juego.
+1. Abre el **Editor de niveles** (Menú → Editor de niveles).
 2. Pinta tus niveles y guárdalos (G).
-3. En el panel **Crear pack** elige el título, el autor y la descripción,
-   ordena los niveles y pulsa crear.
+3. En **Packs propios → Crear nuevo pack** elige el título, el autor y la
+   descripción, ordena los niveles y pulsa crear.
 4. Usa **Exportar pack** para copiar el ZIP a una carpeta (compartirlo por
    redes sociales, etc.).
 
@@ -63,5 +63,6 @@ También puedes crear el ZIP a mano con la estructura de arriba.
 
 - El juego **solo descarga**; nunca sube nada desde el dispositivo.
 - Los niveles dentro del ZIP deben respetar el formato de nivel de TumbleBoy
-  (ver `assets/tumbleboy/data/level_format_readme.txt`).
+  (ver `docs/tumbleboy-level-format.md`).
 - `id` debe ser único, sin espacios ni caracteres raros.
+- Cada pack tiene su propio guardado (3 zócalos por pack, ver `docs/API.md`).

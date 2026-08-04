@@ -14,6 +14,12 @@ var _thumb_ok := false
 
 func _ready():
 	print("== online ==")
+	# Estado limpio: quitar el pack de ejecuciones anteriores para que la
+	# comprobación "no instalado" sea determinista.
+	var dir := Directory.new()
+	if dir.open("user://tumbleboy_packs") == OK:
+		dir.remove("primer_contacto.zip")
+		dir.remove("primer_contacto.zip.tmp")
 	store = preload("res://scripts/tumbleboy/pack_store.gd").new()
 	add_child(store)
 	store.connect("index_updated", self, "_on_index")

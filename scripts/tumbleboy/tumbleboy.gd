@@ -1,5 +1,5 @@
 extends Node2D
-# TumbleBoy — escena completa (port de Application.py + Game.py)
+# TumbleBoy — escena de juego completa (modo historia, packs y niveles sueltos)
 
 const C = preload("res://scripts/tumbleboy/tb_constants.gd")
 const BoardScript = preload("res://scripts/tumbleboy/board.gd")
@@ -91,9 +91,10 @@ func _unhandled_input(ev):
 			_go_to_menu()
 
 func _go_to_menu():
-	if LevelQueue.return_scene != "":
-		var target := LevelQueue.return_scene
-		LevelQueue.clear()
+	var target := LevelQueue.return_scene
+	LevelQueue.clear()
+	SaveData.end_session()
+	if target != "":
 		get_tree().change_scene(target)
 		return
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
@@ -103,10 +104,16 @@ func _start_playing():
 	if LevelQueue.paths.size() > 0:
 		level_names = []
 		level_names.append_array(LevelQueue.paths)
-		LevelQueue.clear()
 	else:
 		_load_level_list()
-	next_level = 0
+	next_level = LevelQueue.start_index
+	if next_level < 0:
+		next_level = 0
+	if next_level > level_names.size():
+		next_level = level_names.size()
+	var saved_scene := LevelQueue.return_scene
+	LevelQueue.clear()
+	LevelQueue.return_scene = saved_scene
 	_load_next_level()
 	state = State.PLAYING
 
@@ -118,6 +125,7 @@ func _state_clear():
 func _win_level():
 	AudioManager.play_sfx(C.SOUNDS_DIR + "win_level.ogg")
 	wait_timer = 3.5
+	SaveData.record_progress(next_level)
 
 func _load_level_list():
 	# Modo historia nostálgico: SOLO los 21 niveles originales de res://,
@@ -267,4 +275,9 @@ func _draw_game():
 func _draw_hint():
 	if hint_font == null:
 		hint_font = UIFonts.make_font(20)
-	draw_string(hint_font, Vector2(C.GAME_OFFSET_X + 20, C.SCREEN_H - 20), "B / ESC: menú", Color(1, 1, 1, 0.6))
+	var text := "B / ESC: menú"
+	var pos := Vector2(C.GAME_OFFSET_X + 20, C.SCREEN_H - 20)
+	var text_size := hint_font.get_string_size(text)
+	var pad := Vector2(10, 6)
+	draw_rect(Rect2(pos.x - pad.x, pos.y - text_size.y - pad.y, text_size.x + pad.x * 2, text_size.y + pad.y * 2), Color(0, 0, 0, 0.55))
+	draw_string(hint_font, pos, text, Color(1, 1, 1, 0.8))

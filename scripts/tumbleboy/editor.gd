@@ -41,6 +41,8 @@ const TOP_H := 90
 const BOTTOM_H := 88
 const CURSOR_CELLS_PER_SEC := 6.0
 const UNDO_LIMIT := 50
+const GRID_MAX_W := 60
+const GRID_MAX_H := 40
 
 var board = null
 var ball = null
@@ -84,6 +86,7 @@ var cursor_accum := Vector2.ZERO
 var last_mouse_pos := Vector2(-9999, -9999)
 var mouse_button := 0
 var touch_painting := false
+var _grew := false
 
 var undo_stack: Array = []
 var redo_stack: Array = []
@@ -99,6 +102,12 @@ func _ready():
 	_new_board()
 	_build_ui()
 	_render()
+	if NavParams.open_file != "":
+		call_deferred("open_file", NavParams.open_file)
+		NavParams.open_file = ""
+	if NavParams.open_pack_panel:
+		call_deferred("open_pack_panel")
+		NavParams.open_pack_panel = false
 
 func _build_ui():
 	var top := ColorRect.new()
@@ -632,7 +641,7 @@ func _new_board():
 	_attributes_to_fields()
 	_theme_sync()
 	_sync_file_label()
-	_set_dim(12, 5)
+	_set_dim(20, 12)
 
 func _set_dim(w: int, h: int):
 	map = []
@@ -884,8 +893,16 @@ func _move_cursor(delta):
 	if step != Vector2.ZERO:
 		cursor_accum -= step
 		cursor_cell += step
-		cursor_cell.x = clamp(cursor_cell.x, 0, board.width - 1)
-		cursor_cell.y = clamp(cursor_cell.y, 0, board.height - 1)
+		var max_cell := _visible_max_cell()
+		cursor_cell.x = clamp(cursor_cell.x, 0, max_cell.x)
+		cursor_cell.y = clamp(cursor_cell.y, 0, max_cell.y)
+
+func _visible_max_cell() -> Vector2:
+	var draw := _draw_area()
+	var cell := C.PIXEL_SIZE * fit_scale
+	if cell <= 0:
+		return Vector2.ZERO
+	return Vector2(max(0, int(floor(draw.size.x / cell))), max(0, int(floor(draw.size.y / cell))))
 
 func _update_cursor_from_mouse():
 	if InputManager.has_joypad():
@@ -977,15 +994,19 @@ func _screen_to_cell(pos: Vector2) -> Vector2:
 	var area := _board_area()
 	if area.size.x <= 0 or area.size.y <= 0:
 		return Vector2(-1, -1)
-	if pos.x < area.position.x or pos.y < area.position.y:
+	var draw := _draw_area()
+	if pos.x < draw.position.x or pos.y < draw.position.y:
 		return Vector2(-1, -1)
-	if pos.x > area.end.x or pos.y > area.end.y:
+	if pos.x > draw.end.x or pos.y > draw.end.y:
 		return Vector2(-1, -1)
 	var local := (pos - area.position) / fit_scale
 	return Vector2(int(local.x / C.PIXEL_SIZE), int(local.y / C.PIXEL_SIZE))
 
 func _paint_cell(x: int, y: int, erase: bool):
 	if read_only:
+		return
+	_grew = false
+	if not erase and not _grow_to(x, y):
 		return
 	if y < 0 or y >= map.size():
 		return
@@ -1008,6 +1029,30 @@ func _paint_cell(x: int, y: int, erase: bool):
 		changed = true
 	if changed:
 		_render()
+		if not erase and _grew:
+			var w := 0
+			for r2 in map:
+				w = max(w, r2.size())
+			_set_status("Mapa ampliado a %dx%d" % [w, map.size()])
+
+func _grow_to(x: int, y: int) -> bool:
+	if x < 0 or y < 0:
+		return false
+	if x >= GRID_MAX_W or y >= GRID_MAX_H:
+		return false
+	var h_before := map.size()
+	var w_before := 0
+	for r2 in map:
+		w_before = max(w_before, r2.size())
+	while map.size() <= y:
+		map.append([])
+	while map[y].size() <= x:
+		map[y].append(C.BLOCK_NONE)
+	var w_after := 0
+	for r2 in map:
+		w_after = max(w_after, r2.size())
+	_grew = (map.size() > h_before or w_after > w_before)
+	return true
 
 func _push_undo(x: int, y: int, old_block: int, new_block: int):
 	undo_stack.append([x, y, old_block, new_block])
@@ -1039,14 +1084,17 @@ func _redo():
 	_render()
 	_set_status("Rehacer")
 
+func _draw_area() -> Rect2:
+	return Rect2(20, TOP_H + 10, 1160, 825 - TOP_H - BOTTOM_H - 20)
+
 func _board_area() -> Rect2:
 	var board_px := float(board.width) * C.PIXEL_SIZE
 	var board_py := float(board.height) * C.PIXEL_SIZE
 	if board_px <= 0 or board_py <= 0:
 		return Rect2(0, 0, 0, 0)
-	var area := Rect2(20, TOP_H + 10, 1160, 825 - TOP_H - BOTTOM_H - 20)
-	fit_scale = min(area.size.x / board_px, area.size.y / board_py)
-	fit_origin = area.position + (area.size - Vector2(board_px, board_py) * fit_scale) * 0.5
+	var draw := _draw_area()
+	fit_scale = min(draw.size.x / board_px, draw.size.y / board_py)
+	fit_origin = draw.position
 	return Rect2(fit_origin, Vector2(board_px, board_py) * fit_scale)
 
 func _draw():
@@ -1058,18 +1106,39 @@ func _draw():
 
 func _draw_edit():
 	var area := _board_area()
+	if area.size.x <= 0 or area.size.y <= 0:
+		return
 	if board_texture == null:
 		return
+	var draw := _draw_area()
 	draw_set_transform(area.position, 0, Vector2(fit_scale, fit_scale))
-	draw_texture(board_texture, Vector2.ZERO)
+	draw_texture(board_texture, -Vector2(C.PIXEL_BORDER, C.PIXEL_BORDER) * 0.5)
 	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
-	for y in range(board.height + 1):
-		draw_line(area.position + Vector2(0, y * C.PIXEL_SIZE * fit_scale), area.position + Vector2(board.width * C.PIXEL_SIZE * fit_scale, y * C.PIXEL_SIZE * fit_scale), Color(1, 1, 1, 0.08), 1)
-	for x in range(board.width + 1):
-		draw_line(area.position + Vector2(x * C.PIXEL_SIZE * fit_scale, 0), area.position + Vector2(x * C.PIXEL_SIZE * fit_scale, board.height * C.PIXEL_SIZE * fit_scale), Color(1, 1, 1, 0.08), 1)
-	if cursor_cell.x >= 0 and cursor_cell.y >= 0 and cursor_cell.x < board.width and cursor_cell.y < board.height:
+	_draw_background_grid(draw, area)
+	if _cursor_visible(cursor_cell):
 		_draw_cursor(area)
 	_draw_swatch(area)
+
+func _draw_background_grid(draw: Rect2, area: Rect2):
+	var cell := C.PIXEL_SIZE * fit_scale
+	if cell <= 0:
+		return
+	var x0 := int(floor((draw.position.x - area.position.x) / cell))
+	var y0 := int(floor((draw.position.y - area.position.y) / cell))
+	var x1 := int(ceil((draw.end.x - area.position.x) / cell))
+	var y1 := int(ceil((draw.end.y - area.position.y) / cell))
+	for y in range(y0, y1 + 1):
+		draw_line(Vector2(draw.position.x, area.position.y + y * cell), Vector2(draw.end.x, area.position.y + y * cell), Color(1, 1, 1, 0.07), 1)
+	for x in range(x0, x1 + 1):
+		draw_line(Vector2(area.position.x + x * cell, draw.position.y), Vector2(area.position.x + x * cell, draw.end.y), Color(1, 1, 1, 0.07), 1)
+
+func _cursor_visible(cell: Vector2) -> bool:
+	if cell.x < 0 or cell.y < 0:
+		return false
+	if cell.x >= GRID_MAX_W or cell.y >= GRID_MAX_H:
+		return false
+	var max_cell := _visible_max_cell()
+	return cell.x <= max_cell.x and cell.y <= max_cell.y
 
 func _draw_cursor(area: Rect2):
 	var cell_origin := area.position + cursor_cell * (C.PIXEL_SIZE * fit_scale)
@@ -1078,7 +1147,11 @@ func _draw_cursor(area: Rect2):
 	if selected_block != C.BLOCK_NONE and selected_block < board.block_images.size():
 		var preview: Texture = board.block_images[selected_block]
 		if preview != null:
-			draw_texture_rect(preview, rect, false)
+			var preview_rect := Rect2(
+				cell_origin - Vector2(C.PIXEL_BORDER, C.PIXEL_BORDER) * 0.5 * fit_scale,
+				Vector2(C.PIXEL_SIZE + C.PIXEL_BORDER, C.PIXEL_SIZE + C.PIXEL_BORDER) * fit_scale
+			)
+			draw_texture_rect(preview, preview_rect, false)
 	draw_rect(rect, Color(1, 1, 1, 0.45))
 	if selected_block == C.BLOCK_NONE or selected_block >= board.block_images.size():
 		draw_rect(rect, Color(0.9, 0.2, 0.2, 0.5))
@@ -1101,7 +1174,7 @@ func _draw_preview():
 	var area := _board_area()
 	if board_texture != null:
 		draw_set_transform(area.position, 0, Vector2(fit_scale, fit_scale))
-		draw_texture(board_texture, Vector2.ZERO)
+		draw_texture(board_texture, -Vector2(C.PIXEL_BORDER, C.PIXEL_BORDER) * 0.5)
 		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 	if ball != null:
 		if ball.images.size() == 0:
@@ -1300,3 +1373,9 @@ func _on_export_copy(target: String, id: String):
 	else:
 		_set_status("ERROR al exportar")
 	export_panel.visible = false
+
+func open_file(path: String):
+	_on_open_selected(path)
+
+func open_pack_panel():
+	_on_open_pack()

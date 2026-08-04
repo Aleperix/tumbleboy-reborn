@@ -2,9 +2,7 @@
 
 **Género:** marble-platformer pseudo-3D (la pelota sube/baja en "z" sobre un tablero de bloques).
 **Autoría:** TeamLibya (Bob Rost, Chris Jackson, Eben Myers, Tom Corbett).
-**Bundle Sugar:** `net.coderanger.olpc.tumbleboy`.
-**Resolución original:** 640×480 escalada a **1100×825** en la XO (el resto de juegos usa 1200×825).
-**Port nº:** 1 (el primero).
+**Resolución original:** 640×480 escalada a **1100×825** (el resto de la interfaz usa 1200×825).
 
 ## Cómo se juega
 
@@ -12,9 +10,19 @@
   `AddForce(dx, dy)` con `BALL_FORCE = 1` por segundo.
 - No hay vidas ni puntos: si la bola cae por debajo de `MAX_DEPTH = -5` vuelve al
   inicio (`SOUND_LOSE_BALL`). Se supera el nivel llegando a un bloque meta `1`.
-- **ESC** (Back) sale. En el menú principal, cualquier tecla empieza a jugar.
+- **B / ESC** vuelve al menú (al hub desde el que entraste). En el menú principal,
+  **B / ESC** sale del juego.
 - Al ganar un nivel aparece `good_job.png` 3.5 s y pasa al siguiente automáticamente.
-- Al terminar los 21 niveles se muestra `win_game.png` (10 s) con animación.
+- Al terminar todos los niveles de una secuencia se muestra `win_game.png` (10 s)
+  con animación y se vuelve al hub.
+
+## Modos de juego
+
+- **Modo historia**: los 21 niveles originales de `assets/tumbleboy/data/levels/`,
+  con guardado por **zócalos de memoria** (3 zócalos por partida; Nueva partida,
+  Continuar o jugar sin guardar).
+- **Packs comunitarios**: cada pack descargado tiene sus propios 3 zócalos.
+- **Niveles sueltos** (editor): se juegan sin guardado (quick play).
 
 ## Física (traducción fiel del original)
 
@@ -68,17 +76,21 @@ de "velocidad acumulada" (`anim_timer += speed*dt`).
 `start_level`, `lose_ball`, `hit_wall`, `hit_ground`, `hit_bumper`, `win_level`,
 `win_game`. Se disparan por umbrales: `HIT_GROUND >= 2`, `HIT_WALL >= 1`.
 
-## Menús
+## Interfaz
 
-- Portada `main_menu.png` con niño animado (`menu_anim1/2.png` en
-  `MENU_ANIM_RECT`), victoria `win_game.png` con `win_anim1/2.png`.
+- `MainMenu` con icono del juego, título, subtítulo y los 4 accesos; hint con
+  fondo para legibilidad.
+- **Hubs** (`StoryHub`, `PacksCommunity`, `EditorHub`) con foco D-pad y hint
+  "B / ESC: volver".
+- **SlotPicker** (zócalos de memoria) con confirmación al sobrescribir una partida.
+- Portada y victoria del original (`main_menu.png`, `win_game.png` con animaciones).
 
 ## Port (GDScript)
 
 - `scripts/tumbleboy/` — módulos por clase: `Board` (grilla, alturas, bumpers),
-  `Ball` (física 3D, animación, escala por z), `Game` (bucle, niveles, cámara),
-  `Levels` (parser del `.txt`), `TumbleBoy` (escena completa).
+  `Ball` (física 3D, animación, escala por z), `Levels` (parser del `.txt`),
+  `TumbleBoy` (escena completa), `Editor` (editor visual), `PackReader`/`Zip*`
+  (packs) y `PackStore` (tienda online).
 - La cámara sigue a la bola con margen `SCREEN_MARGIN` (200 px) y límites del nivel.
 - Tiles de 64 px con borde de 12 px (PIXEL_BORDER) para el efecto de profundidad.
-- Editor visual de niveles: paleta de bloques, pintar con tap/mouse, guardar/abrir
-  archivos `.txt` del formato original, vista previa 3D con física.
+- El editor visual usa la misma paleta y guarda en el formato original `.txt`.

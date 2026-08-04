@@ -20,6 +20,7 @@ AudioManager="*res://autoload/audio_manager.gd"
 SaveData="*res://autoload/save_data.gd"
 InputManager="*res://autoload/input_manager.gd"
 LevelQueue="*res://autoload/level_queue.gd"
+NavParams="*res://autoload/nav_params.gd"
 
 [display]
 

@@ -1,16 +1,17 @@
 extends Control
-# MainMenu — TumbleBoy Reborn: lanzador nostálgico (Jugar / Niveles y packs / Editor).
+# MainMenu — TumbleBoy Reborn: menú principal (Modo historia / Packs / Editor / Créditos / Salir).
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 
-const GAMES := [
-	{ "id": "play", "name": "Jugar — TumbleBoy (historia)", "scene": "res://scenes/TumbleBoy.tscn" },
-	{ "id": "levels", "name": "Niveles y packs", "scene": "res://scenes/LevelSelect.tscn" },
-	{ "id": "editor", "name": "Editor de niveles", "scene": "res://scenes/TumbleBoyEditor.tscn" },
+const MENU_ITEMS := [
+	{ "id": "story",   "name": "Modo historia",             "scene": "res://scenes/StoryHub.tscn" },
+	{ "id": "packs",   "name": "Packs comunitarios",        "scene": "res://scenes/PacksCommunity.tscn" },
+	{ "id": "editor",  "name": "Editor de niveles",         "scene": "res://scenes/EditorHub.tscn" },
+	{ "id": "credits", "name": "Créditos",                  "scene": "res://scenes/Credits.tscn" },
+	{ "id": "quit",    "name": "Salir",                     "scene": "" },
 ]
 
 var buttons: Array = []
-var selected := 0
 
 func _ready():
 	_build_ui()
@@ -28,9 +29,21 @@ func _build_ui():
 
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGN_CENTER
-	col.add_constant_override("separation", 12)
+	col.add_constant_override("separation", 10)
 	col.rect_min_size = Vector2(440, 0)
 	center.add_child(col)
+
+	var icon := TextureRect.new()
+	icon.texture = load("res://assets/tumbleboy/icon.png")
+	icon.expand = true
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.rect_min_size = Vector2(96, 96)
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(icon)
+
+	var spacer1 := Control.new()
+	spacer1.rect_min_size = Vector2(0, 6)
+	col.add_child(spacer1)
 
 	var title := Label.new()
 	title.text = "TUMBLEBOY REBORN"
@@ -40,24 +53,24 @@ func _build_ui():
 	col.add_child(title)
 
 	var sub := Label.new()
-	sub.text = "La reencarnación del juego perdido de las XO / Ceibalitas"
+	sub.text = "TumbleBoy — el clásico del puzzle en Godot"
 	sub.add_font_override("font", UIFonts.make_font(16))
 	sub.add_color_override("font_color", Color(0.7, 0.67, 0.8))
 	sub.align = Label.ALIGN_CENTER
 	col.add_child(sub)
 
-	var spacer := Control.new()
-	spacer.rect_min_size = Vector2(0, 16)
-	col.add_child(spacer)
+	var spacer2 := Control.new()
+	spacer2.rect_min_size = Vector2(0, 16)
+	col.add_child(spacer2)
 
-	for g in GAMES:
+	for item in MENU_ITEMS:
 		var btn := Button.new()
-		btn.text = g["name"]
+		btn.text = item["name"]
 		btn.focus_mode = Control.FOCUS_ALL
 		btn.rect_min_size = Vector2(400, 50)
 		btn.add_font_override("font", UIFonts.make_font(18))
 		btn.add_color_override("font_color", Color(0.95, 0.93, 0.88))
-		btn.connect("pressed", self, "_on_game_pressed", [g])
+		btn.connect("pressed", self, "_on_item_pressed", [item])
 		col.add_child(btn)
 		buttons.append(btn)
 
@@ -66,14 +79,24 @@ func _build_ui():
 	hint.add_font_override("font", UIFonts.make_font(14))
 	hint.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 	hint.align = Label.ALIGN_CENTER
+	var hint_sb := StyleBoxFlat.new()
+	hint_sb.bg_color = Color(0, 0, 0, 0.35)
+	hint_sb.set_corner_radius_all(4)
+	hint_sb.content_margin_left = 8
+	hint_sb.content_margin_top = 8
+	hint_sb.content_margin_right = 8
+	hint_sb.content_margin_bottom = 8
+	hint.add_stylebox_override("normal", hint_sb)
 	col.add_child(hint)
 
 	if buttons.size() > 0:
 		buttons[0].grab_focus()
-		selected = 0
 
-func _on_game_pressed(g: Dictionary):
-	get_tree().change_scene(g["scene"])
+func _on_item_pressed(item: Dictionary):
+	if item["scene"] == "":
+		get_tree().quit()
+	else:
+		get_tree().change_scene(item["scene"])
 
 func _input(ev):
 	if ev is InputEventKey and ev.pressed and not ev.echo:

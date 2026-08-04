@@ -79,8 +79,10 @@ d###w###w###d
 
 ## Notas del port
 
-- El parser (`Levels.gd`) reproduce `LevelMaps.py`: atributos antes de `!!!`,
+- El parser (`Levels.gd`) reproduce el original: atributos antes de `!!!`,
   mapa entre las dos líneas `!!!`, filas de igual longitud (las más cortas se
   rellenan con huecos).
-- El orden de carga = orden alfabético de nombre de archivo.
-- El editor visual guarda con este mismo formato y puede abrir niveles de terceros.
+- El orden de carga del modo historia = orden alfabético de nombre de archivo.
+- Los niveles creados en el editor se guardan en `user://tumbleboy_levels/`.
+- El editor visual guarda con este mismo formato y puede abrir niveles de terceros
+  (`FileDialog` de apertura y desde el hub **Niveles propios**).
