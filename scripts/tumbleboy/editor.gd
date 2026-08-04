@@ -1,20 +1,21 @@
 extends Node2D
 # TumbleBoyEditor — editor visual de niveles con el formato .txt original.
-# v2: fuentes corregidas (DynamicFont sin font_data no renderiza en Godot 3),
-# paleta scrollable, panel de ayuda (F1), cursor + preview de bloque,
-# input unificado (mouse/teclado/touch/D-pad/gamepad), deshacer/rehacer.
+# v3: help en 2 columnas, paleta sin Piso2/Piso3 (idénticos por tema),
+# traducciones de temas/niños, campos autor/descripción (créditos),
+# current_file + niveles de solo lectura, confirmación de guardado,
+# creación y exportación de packs (ZIP + manifest.json).
 
 const C = preload("res://scripts/tumbleboy/tb_constants.gd")
 const BoardScript = preload("res://scripts/tumbleboy/board.gd")
 const BallScript = preload("res://scripts/tumbleboy/ball.gd")
 const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
+const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
+const ZIPWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
 
 const PALETTE := [
 	["Borrar", C.BLOCK_NONE],
 	["Piso", C.BLOCK_FLOOR],
-	["Piso 2", C.BLOCK_FLOOR2],
-	["Piso 3", C.BLOCK_FLOOR3],
 	["Muro", C.BLOCK_WALL],
 	["Muro 2", C.BLOCK_WALL2],
 	["Muro 3", C.BLOCK_WALL3],
@@ -31,8 +32,12 @@ const PALETTE := [
 ]
 
 const THEMES := ["default", "beach", "spacetheme1"]
+const THEME_NAMES := { "default": "Por defecto", "beach": "Playa", "spacetheme1": "Tema espacial" }
 const BOYS := ["boy1", "boy2", "boy3", "boy4"]
-const TOP_H := 68
+const BOY_NAMES := { "boy1": "Predeterminado", "boy2": "Astronauta", "boy3": "Camiseta amarilla", "boy4": "Estirado" }
+const USER_LEVELS_DIR := "user://tumbleboy_levels/"
+const PACKS_DIR := "user://tumbleboy_packs/"
+const TOP_H := 90
 const BOTTOM_H := 88
 const CURSOR_CELLS_PER_SEC := 6.0
 const UNDO_LIMIT := 50
@@ -46,9 +51,15 @@ var play_mode := false
 var board_texture: Texture = null
 var anim_timer := 0.0
 
+var current_file := ""
+var read_only := false
+
 var status_label: Label
+var file_label: Label
 var hint_label: Label
 var name_edit: LineEdit
+var author_edit: LineEdit
+var desc_edit: LineEdit
 var theme_option: OptionButton
 var boy_option: OptionButton
 var paint_buttons: Array = []
@@ -56,6 +67,17 @@ var palette_scroll: ScrollContainer
 var help_panel: Control
 var help_visible := false
 var dialog_open := false
+var confirm_dialog: ConfirmationDialog
+var save_pending_path := ""
+
+var pack_panel: Control
+var pack_name_edit: LineEdit
+var pack_author_edit: LineEdit
+var pack_desc_edit: LineEdit
+var available_list: ItemList
+var pack_list: ItemList
+var pack_available: Array = []
+var pack_selected: Array = []
 
 var cursor_cell := Vector2(0, 0)
 var cursor_accum := Vector2.ZERO
@@ -94,27 +116,36 @@ func _build_ui():
 	x = _add_tool_button(x, "Salir", "_on_exit", 70)
 	x += 4
 	x = _add_tool_button(x, "?", "_toggle_help", 34)
+	x = _add_tool_button(x, "Crear pack", "_on_open_pack", 96)
+	x = _add_tool_button(x, "Exportar pack", "_on_open_export", 96)
 
 	name_edit = LineEdit.new()
-	name_edit.rect_position = Vector2(8, 38)
-	name_edit.rect_size = Vector2(180, 24)
+	name_edit.rect_position = Vector2(8, 40)
+	name_edit.rect_size = Vector2(140, 24)
 	name_edit.placeholder_text = "nombre del nivel"
 	name_edit.add_font_override("font", UIFonts.make_font(14))
 	name_edit.connect("text_entered", self, "_on_name_entered")
 	add_child(name_edit)
 
+	author_edit = LineEdit.new()
+	author_edit.rect_position = Vector2(156, 40)
+	author_edit.rect_size = Vector2(140, 24)
+	author_edit.placeholder_text = "autor / créditos"
+	author_edit.add_font_override("font", UIFonts.make_font(14))
+	add_child(author_edit)
+
 	var theme_label := Label.new()
 	theme_label.text = "Tema"
 	theme_label.add_font_override("font", UIFonts.make_font(14))
 	theme_label.add_color_override("font_color", Color(0.8, 0.8, 0.85))
-	theme_label.rect_position = Vector2(196, 42)
+	theme_label.rect_position = Vector2(304, 44)
 	add_child(theme_label)
 
 	theme_option = OptionButton.new()
-	theme_option.rect_position = Vector2(238, 38)
-	theme_option.rect_size = Vector2(120, 24)
+	theme_option.rect_position = Vector2(338, 40)
+	theme_option.rect_size = Vector2(150, 24)
 	for t in THEMES:
-		theme_option.add_item(t)
+		theme_option.add_item(THEME_NAMES.get(t, t))
 	theme_option.select(0)
 	theme_option.connect("item_selected", self, "_on_theme_selected")
 	add_child(theme_option)
@@ -123,24 +154,38 @@ func _build_ui():
 	boy_label.text = "Niño"
 	boy_label.add_font_override("font", UIFonts.make_font(14))
 	boy_label.add_color_override("font_color", Color(0.8, 0.8, 0.85))
-	boy_label.rect_position = Vector2(368, 42)
+	boy_label.rect_position = Vector2(496, 44)
 	add_child(boy_label)
 
 	boy_option = OptionButton.new()
-	boy_option.rect_position = Vector2(408, 38)
-	boy_option.rect_size = Vector2(90, 24)
+	boy_option.rect_position = Vector2(530, 40)
+	boy_option.rect_size = Vector2(170, 24)
 	for b in BOYS:
-		boy_option.add_item(b)
+		boy_option.add_item(BOY_NAMES.get(b, b))
 	boy_option.select(0)
 	boy_option.connect("item_selected", self, "_on_boy_selected")
 	add_child(boy_option)
 
 	status_label = Label.new()
-	status_label.rect_position = Vector2(510, 42)
-	status_label.rect_size = Vector2(680, 22)
+	status_label.rect_position = Vector2(710, 42)
+	status_label.rect_size = Vector2(482, 22)
 	status_label.add_font_override("font", UIFonts.make_font(14))
 	status_label.add_color_override("font_color", Color(0.6, 0.9, 0.6))
 	add_child(status_label)
+
+	desc_edit = LineEdit.new()
+	desc_edit.rect_position = Vector2(8, 64)
+	desc_edit.rect_size = Vector2(360, 24)
+	desc_edit.placeholder_text = "descripción del nivel"
+	desc_edit.add_font_override("font", UIFonts.make_font(14))
+	add_child(desc_edit)
+
+	file_label = Label.new()
+	file_label.rect_position = Vector2(380, 66)
+	file_label.rect_size = Vector2(812, 20)
+	file_label.add_font_override("font", UIFonts.make_font(13))
+	file_label.add_color_override("font_color", Color(0.75, 0.75, 0.8))
+	add_child(file_label)
 
 	var pal := ColorRect.new()
 	pal.color = Color(0.1, 0.08, 0.13)
@@ -179,7 +224,17 @@ func _build_ui():
 	hint_label.add_color_override("font_color", Color(0.6, 0.6, 0.7))
 	add_child(hint_label)
 
+	confirm_dialog = ConfirmationDialog.new()
+	confirm_dialog.window_title = "Guardar nivel"
+	confirm_dialog.get_ok().text = "Guardar"
+	confirm_dialog.add_cancel("Cancelar")
+	confirm_dialog.connect("confirmed", self, "_on_save_confirmed")
+	add_child(confirm_dialog)
+
 	_build_help()
+	_build_pack_panel()
+	_build_export_panel()
+	_sync_file_label()
 
 func _build_help():
 	help_panel = Control.new()
@@ -195,48 +250,296 @@ func _build_help():
 
 	var box := ColorRect.new()
 	box.color = Color(0.13, 0.11, 0.17)
-	box.rect_position = Vector2(160, 70)
-	box.rect_size = Vector2(880, 620)
+	box.rect_position = Vector2(120, 60)
+	box.rect_size = Vector2(960, 680)
 	help_panel.add_child(box)
 
 	var title := Label.new()
 	title.text = "EDITOR DE NIVELES TUMBLEBOY"
 	title.add_font_override("font", UIFonts.make_font(26, true))
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
-	title.rect_position = Vector2(180, 90)
+	title.rect_position = Vector2(180, 84)
 	help_panel.add_child(title)
 
-	var body := Label.new()
-	body.text = """MOUSE:  clic izq pintar · clic der borrar · arrastrar dibuja · rueda: ver paleta
-TECLADO: flechas mover cursor · 1-9 / Q / E: elegir bloque
-		 G guardar · O abrir · N nuevo · T probar · F1 cerrar esta ayuda
-		 Retroceso: borrar · Ctrl+Z deshacer · Ctrl+Y rehacer
-GAMEPAD / TV:  D-pad mover cursor · A pintar · L1/R1 cambiar bloque
-		 B / ESC: volver (salir de la vista previa primero)
-TOUCH:  tap pintar · arrastrar dibuja · deslizar la paleta para ver más bloques
+	var hrow := HBoxContainer.new()
+	hrow.rect_position = Vector2(180, 140)
+	hrow.rect_size = Vector2(840, 400)
+	help_panel.add_child(hrow)
 
-FLUJO DE TRABAJO:
-  1) Elige un bloque en la paleta de abajo (Inicio = $, Meta = 1).
-  2) Pinta sobre el tablero.
-  3) Ajusta Tema y Niño si quieres.
-  4) Pulsa Probar (T) para testear el nivel con la bola.
-  5) Pulsa Guardar (G); se guarda en user://tumbleboy_levels/."""
-	body.add_font_override("font", UIFonts.make_font(16))
-	body.add_color_override("font_color", Color(0.88, 0.88, 0.93))
-	body.autowrap = true
-	body.rect_position = Vector2(190, 140)
-	body.rect_size = Vector2(820, 480)
-	help_panel.add_child(body)
+	var left := VBoxContainer.new()
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.add_constant_override("separation", 6)
+	hrow.add_child(left)
+
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_constant_override("separation", 6)
+	hrow.add_child(right)
+
+	for entry in [
+		["MOUSE", true],
+		["  clic izq pintar", false],
+		["  clic der borrar", false],
+		["  arrastrar dibuja", false],
+		["  rueda: ver paleta", false],
+		["TECLADO", true],
+		["  flechas: mover cursor", false],
+		["  1-9 / Q / E: bloque", false],
+		["  G guardar · O abrir", false],
+		["  N nuevo · T probar", false],
+		["  Retroceso: borrar", false],
+		["  Ctrl+Z deshacer · Ctrl+Y rehacer", false],
+		["  F1: cerrar esta ayuda", false],
+	]:
+		if entry[1]:
+			left.add_child(_help_heading(entry[0]))
+		else:
+			left.add_child(_help_line(entry[0]))
+
+	for entry in [
+		["GAMEPAD / TV", true],
+		["  D-pad: mover cursor", false],
+		["  A pintar", false],
+		["  L1/R1: cambiar bloque", false],
+		["  B / ESC: volver", false],
+		["TOUCH", true],
+		["  tap pintar", false],
+		["  arrastrar dibuja", false],
+		["  desliza la paleta", false],
+		["", false],
+		["FLUJO DE TRABAJO", true],
+		["  1) Elige un bloque abajo (Inicio = $, Meta = 1)", false],
+		["  2) Pinta sobre el tablero.", false],
+		["  3) Ajusta Tema y Niño (créditos: autor/descripción).", false],
+		["  4) Probar (T) testea con la bola.", false],
+		["  5) Guardar (G) → user://tumbleboy_levels/", false],
+	]:
+		if entry[1]:
+			right.add_child(_help_heading(entry[0]))
+		else:
+			right.add_child(_help_line(entry[0]))
 
 	var close := Button.new()
 	close.text = "Cerrar  (F1)"
-	close.rect_position = Vector2(480, 650)
+	close.rect_position = Vector2(480, 660)
 	close.rect_size = Vector2(240, 34)
 	close.add_font_override("font", UIFonts.make_font(15))
 	close.connect("pressed", self, "_toggle_help")
 	help_panel.add_child(close)
 
 	help_panel.visible = false
+
+func _help_heading(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_font_override("font", UIFonts.make_font(17, true))
+	l.add_color_override("font_color", Color(0.95, 0.9, 0.6))
+	return l
+
+func _help_line(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_font_override("font", UIFonts.make_font(15))
+	l.add_color_override("font_color", Color(0.88, 0.88, 0.93))
+	return l
+
+func _build_pack_panel():
+	pack_panel = Control.new()
+	pack_panel.rect_position = Vector2(0, 0)
+	pack_panel.rect_size = Vector2(1200, 825)
+	add_child(pack_panel)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.05, 0.04, 0.08, 0.94)
+	bg.rect_position = Vector2(0, 0)
+	bg.rect_size = Vector2(1200, 825)
+	pack_panel.add_child(bg)
+
+	var box := ColorRect.new()
+	box.color = Color(0.13, 0.11, 0.17)
+	box.rect_position = Vector2(120, 50)
+	box.rect_size = Vector2(960, 700)
+	pack_panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "CREAR PACK"
+	title.add_font_override("font", UIFonts.make_font(26, true))
+	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
+	title.rect_position = Vector2(180, 70)
+	pack_panel.add_child(title)
+
+	var note := Label.new()
+	note.text = "El pack se guarda como ZIP en user://tumbleboy_packs/ (título + créditos obligatorios)."
+	note.add_font_override("font", UIFonts.make_font(14))
+	note.add_color_override("font_color", Color(0.7, 0.7, 0.8))
+	note.rect_position = Vector2(180, 108)
+	pack_panel.add_child(note)
+
+	var lab1 := Label.new()
+	lab1.text = "Título (id del pack):"
+	lab1.add_font_override("font", UIFonts.make_font(14))
+	lab1.add_color_override("font_color", Color(0.8, 0.8, 0.85))
+	lab1.rect_position = Vector2(180, 140)
+	pack_panel.add_child(lab1)
+
+	pack_name_edit = LineEdit.new()
+	pack_name_edit.rect_position = Vector2(320, 138)
+	pack_name_edit.rect_size = Vector2(440, 24)
+	pack_name_edit.add_font_override("font", UIFonts.make_font(14))
+	pack_panel.add_child(pack_name_edit)
+
+	var lab2 := Label.new()
+	lab2.text = "Autor / créditos:"
+	lab2.add_font_override("font", UIFonts.make_font(14))
+	lab2.add_color_override("font_color", Color(0.8, 0.8, 0.85))
+	lab2.rect_position = Vector2(180, 172)
+	pack_panel.add_child(lab2)
+
+	pack_author_edit = LineEdit.new()
+	pack_author_edit.rect_position = Vector2(320, 170)
+	pack_author_edit.rect_size = Vector2(440, 24)
+	pack_author_edit.add_font_override("font", UIFonts.make_font(14))
+	pack_panel.add_child(pack_author_edit)
+
+	var lab3 := Label.new()
+	lab3.text = "Descripción:"
+	lab3.add_font_override("font", UIFonts.make_font(14))
+	lab3.add_color_override("font_color", Color(0.8, 0.8, 0.85))
+	lab3.rect_position = Vector2(180, 204)
+	pack_panel.add_child(lab3)
+
+	pack_desc_edit = LineEdit.new()
+	pack_desc_edit.rect_position = Vector2(320, 202)
+	pack_desc_edit.rect_size = Vector2(600, 24)
+	pack_desc_edit.add_font_override("font", UIFonts.make_font(14))
+	pack_panel.add_child(pack_desc_edit)
+
+	var col_label := Label.new()
+	col_label.text = "Niveles de usuario disponibles:"
+	col_label.add_font_override("font", UIFonts.make_font(15))
+	col_label.add_color_override("font_color", Color(0.85, 0.85, 0.9))
+	col_label.rect_position = Vector2(180, 250)
+	pack_panel.add_child(col_label)
+
+	available_list = ItemList.new()
+	available_list.rect_position = Vector2(180, 280)
+	available_list.rect_size = Vector2(360, 320)
+	available_list.add_font_override("font", UIFonts.make_font(14))
+	available_list.focus_mode = Control.FOCUS_ALL
+	pack_panel.add_child(available_list)
+
+	var mid := VBoxContainer.new()
+	mid.rect_position = Vector2(556, 300)
+	mid.rect_size = Vector2(88, 280)
+	mid.add_constant_override("separation", 8)
+	pack_panel.add_child(mid)
+	mid.add_child(_pack_mid_button(">", "_on_pack_add"))
+	mid.add_child(_pack_mid_button("<", "_on_pack_remove"))
+	mid.add_child(_pack_mid_button("Subir", "_on_pack_up"))
+	mid.add_child(_pack_mid_button("Bajar", "_on_pack_down"))
+
+	var order_label := Label.new()
+	order_label.text = "Niveles del pack (en orden):"
+	order_label.add_font_override("font", UIFonts.make_font(15))
+	order_label.add_color_override("font_color", Color(0.85, 0.85, 0.9))
+	order_label.rect_position = Vector2(660, 250)
+	pack_panel.add_child(order_label)
+
+	pack_list = ItemList.new()
+	pack_list.rect_position = Vector2(660, 280)
+	pack_list.rect_size = Vector2(360, 320)
+	pack_list.add_font_override("font", UIFonts.make_font(14))
+	pack_list.focus_mode = Control.FOCUS_ALL
+	pack_panel.add_child(pack_list)
+
+	var ok := Button.new()
+	ok.text = "Crear pack"
+	ok.rect_position = Vector2(560, 620)
+	ok.rect_size = Vector2(160, 36)
+	ok.add_font_override("font", UIFonts.make_font(15))
+	ok.connect("pressed", self, "_on_create_pack")
+	pack_panel.add_child(ok)
+
+	var cancel := Button.new()
+	cancel.text = "Cancelar  (B)"
+	cancel.rect_position = Vector2(740, 620)
+	cancel.rect_size = Vector2(160, 36)
+	cancel.add_font_override("font", UIFonts.make_font(15))
+	cancel.connect("pressed", self, "_on_close_pack")
+	pack_panel.add_child(cancel)
+
+	pack_panel.visible = false
+
+func _pack_mid_button(text: String, method: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.rect_min_size = Vector2(80, 34)
+	b.add_font_override("font", UIFonts.make_font(14))
+	b.connect("pressed", self, method)
+	return b
+
+func _build_export_panel():
+	var panel := Control.new()
+	panel.rect_position = Vector2(0, 0)
+	panel.rect_size = Vector2(1200, 825)
+	add_child(panel)
+	export_panel = panel
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.05, 0.04, 0.08, 0.94)
+	bg.rect_position = Vector2(0, 0)
+	bg.rect_size = Vector2(1200, 825)
+	panel.add_child(bg)
+
+	var box := ColorRect.new()
+	box.color = Color(0.13, 0.11, 0.17)
+	box.rect_position = Vector2(200, 120)
+	box.rect_size = Vector2(800, 480)
+	panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "EXPORTAR PACK"
+	title.add_font_override("font", UIFonts.make_font(24, true))
+	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
+	title.rect_position = Vector2(240, 150)
+	panel.add_child(title)
+
+	var note := Label.new()
+	note.text = "Elige un pack para copiar su ZIP a otra carpeta y compartirlo."
+	note.add_font_override("font", UIFonts.make_font(14))
+	note.add_color_override("font_color", Color(0.7, 0.7, 0.8))
+	note.rect_position = Vector2(240, 190)
+	panel.add_child(note)
+
+	export_list = ItemList.new()
+	export_list.rect_position = Vector2(240, 230)
+	export_list.rect_size = Vector2(720, 250)
+	export_list.add_font_override("font", UIFonts.make_font(14))
+	export_list.focus_mode = Control.FOCUS_ALL
+	panel.add_child(export_list)
+
+	var ok := Button.new()
+	ok.text = "Exportar"
+	ok.rect_position = Vector2(440, 510)
+	ok.rect_size = Vector2(160, 36)
+	ok.add_font_override("font", UIFonts.make_font(15))
+	ok.connect("pressed", self, "_on_export_selected")
+	panel.add_child(ok)
+
+	var cancel := Button.new()
+	cancel.text = "Cancelar  (B)"
+	cancel.rect_position = Vector2(620, 510)
+	cancel.rect_size = Vector2(160, 36)
+	cancel.add_font_override("font", UIFonts.make_font(15))
+	cancel.connect("pressed", self, "_on_close_export")
+	panel.add_child(cancel)
+
+	panel.visible = false
+
+var export_panel: Control
+var export_list: ItemList
+var export_packs: Array = []
 
 func _toggle_help():
 	help_visible = not help_visible
@@ -260,12 +563,12 @@ func _add_tool_button(x: float, text: String, method: String, width: float) -> f
 func _on_name_entered(_text: String):
 	_set_status("Nombre: " + name_edit.text)
 
-func _on_theme_selected(_idx: int):
-	attributes["theme"] = THEMES[theme_option.get_selected_id()]
+func _on_theme_selected(idx: int):
+	attributes["theme"] = THEMES[idx]
 	_render()
 
-func _on_boy_selected(_idx: int):
-	attributes["boy"] = BOYS[boy_option.get_selected_id()]
+func _on_boy_selected(idx: int):
+	attributes["boy"] = BOYS[idx]
 
 func _on_palette_pressed(btn: Button, block: int):
 	_select_paint(block)
@@ -324,8 +627,11 @@ func _new_board():
 	redo_stack = []
 	cursor_cell = Vector2.ZERO
 	cursor_accum = Vector2.ZERO
-	_name_sync()
+	current_file = ""
+	read_only = false
+	_attributes_to_fields()
 	_theme_sync()
+	_sync_file_label()
 	_set_dim(12, 5)
 
 func _set_dim(w: int, h: int):
@@ -336,9 +642,18 @@ func _set_dim(w: int, h: int):
 			row.append(C.BLOCK_NONE)
 		map.append(row)
 
-func _name_sync():
+func _attributes_to_fields():
 	if name_edit != null:
 		name_edit.text = attributes.get("name", "")
+	if author_edit != null:
+		author_edit.text = attributes.get("author", "")
+	if desc_edit != null:
+		desc_edit.text = attributes.get("instructions", "")
+
+func _collect_fields_to_attributes():
+	attributes["name"] = name_edit.text.strip_edges()
+	attributes["author"] = author_edit.text.strip_edges()
+	attributes["instructions"] = desc_edit.text.strip_edges()
 
 func _theme_sync():
 	if theme_option != null:
@@ -350,12 +665,21 @@ func _theme_sync():
 		var idx2 := BOYS.find(b)
 		boy_option.select(idx2 if idx2 >= 0 else 0)
 
+func _sync_file_label():
+	if file_label == null:
+		return
+	if current_file == "":
+		file_label.text = "Sin archivo — nivel nuevo"
+	else:
+		var suffix := "  (solo lectura: usa 'Guardar como')" if read_only else ""
+		file_label.text = "Archivo: " + current_file + suffix
+
 func _on_open():
 	dialog_open = true
 	var fd := FileDialog.new()
 	fd.mode = FileDialog.MODE_OPEN_FILE
 	fd.access = FileDialog.ACCESS_RESOURCES
-	fd.current_dir = C.LEVELS_DIR
+	fd.current_dir = USER_LEVELS_DIR
 	fd.add_filter("*.txt ; Niveles TumbleBoy")
 	fd.window_title = "Abrir nivel"
 	fd.connect("file_selected", self, "_on_open_selected")
@@ -377,27 +701,37 @@ func _on_open_selected(path: String):
 	redo_stack = []
 	cursor_cell = Vector2.ZERO
 	cursor_accum = Vector2.ZERO
-	_name_sync()
+	current_file = path
+	read_only = path.begins_with("res://")
+	_attributes_to_fields()
 	_theme_sync()
+	_sync_file_label()
 	_render()
-	_set_status("Abierto: " + path.get_file())
+	_set_status("Abierto: " + path.get_file() + ("  (solo lectura)" if read_only else ""))
 
 func _on_save():
+	if read_only:
+		_set_status("Nivel de solo lectura: usa 'Guardar como' para copiarlo a tus niveles")
+		return
 	var msg := _validate_map()
 	if msg != "":
 		_set_status("No guardado: " + msg)
 		return
+	_collect_fields_to_attributes()
 	var fname := name_edit.text.strip_edges()
 	if fname == "":
 		fname = "nuevo_nivel"
 	if not fname.ends_with(".txt"):
 		fname += ".txt"
-	if attributes.has("name"):
-		attributes["name"] = name_edit.text.strip_edges()
-	var dir := Directory.new()
-	dir.make_dir_recursive("user://tumbleboy_levels")
-	var path := "user://tumbleboy_levels/" + fname
-	_save_to(path)
+	save_pending_path = USER_LEVELS_DIR + fname
+	confirm_dialog.dialog_text = "¿Guardar en\n" + save_pending_path + "?"
+	confirm_dialog.connect("popup_hide", self, "_on_dialog_closed")
+	confirm_dialog.popup_centered()
+	dialog_open = true
+
+func _on_save_confirmed():
+	dialog_open = false
+	_save_to(save_pending_path)
 
 func _validate_map() -> String:
 	var has_start := false
@@ -419,9 +753,9 @@ func _on_save_as():
 	var fd := FileDialog.new()
 	fd.mode = FileDialog.MODE_SAVE_FILE
 	fd.access = FileDialog.ACCESS_RESOURCES
-	fd.current_dir = C.LEVELS_DIR
+	fd.current_dir = USER_LEVELS_DIR
 	fd.add_filter("*.txt ; Niveles TumbleBoy")
-	fd.window_title = "Guardar nivel"
+	fd.window_title = "Guardar nivel como"
 	fd.connect("file_selected", self, "_save_to")
 	fd.connect("popup_hide", self, "_on_dialog_closed")
 	add_child(fd)
@@ -430,8 +764,14 @@ func _on_save_as():
 func _save_to(path: String):
 	if not path.ends_with(".txt"):
 		path += ".txt"
+	var dir := Directory.new()
+	dir.make_dir_recursive(path.get_base_dir())
+	_collect_fields_to_attributes()
 	var saved := LevelsScript.write_level(path, attributes, map)
 	if saved:
+		current_file = path
+		read_only = false
+		_sync_file_label()
 		_set_status("Guardado: " + path)
 	else:
 		_set_status("ERROR al guardar")
@@ -489,6 +829,13 @@ func _process(delta):
 	if play_mode:
 		_process_play(delta)
 		return
+	if pack_panel.visible or export_panel.visible:
+		if InputManager.back_just_pressed():
+			if pack_panel.visible:
+				_on_close_pack()
+			else:
+				_on_close_export()
+		return
 	if dialog_open:
 		return
 	if help_visible:
@@ -519,7 +866,7 @@ func _process_play(delta):
 	update()
 
 func _is_typing() -> bool:
-	return (name_edit != null and name_edit.has_focus()) or (theme_option != null and theme_option.has_focus()) or (boy_option != null and boy_option.has_focus())
+	return (name_edit != null and name_edit.has_focus()) or (author_edit != null and author_edit.has_focus()) or (desc_edit != null and desc_edit.has_focus()) or (theme_option != null and theme_option.has_focus()) or (boy_option != null and boy_option.has_focus())
 
 func _move_cursor(delta):
 	if board.width <= 0 or board.height <= 0:
@@ -553,6 +900,13 @@ func _update_cursor_from_mouse():
 
 func _unhandled_input(ev):
 	if play_mode:
+		return
+	if pack_panel.visible or export_panel.visible:
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.scancode == KEY_ESCAPE:
+			if pack_panel.visible:
+				_on_close_pack()
+			else:
+				_on_close_export()
 		return
 	if dialog_open:
 		return
@@ -631,6 +985,8 @@ func _screen_to_cell(pos: Vector2) -> Vector2:
 	return Vector2(int(local.x / C.PIXEL_SIZE), int(local.y / C.PIXEL_SIZE))
 
 func _paint_cell(x: int, y: int, erase: bool):
+	if read_only:
+		return
 	if y < 0 or y >= map.size():
 		return
 	var row = map[y]
@@ -660,6 +1016,8 @@ func _push_undo(x: int, y: int, old_block: int, new_block: int):
 	redo_stack = []
 
 func _undo():
+	if read_only:
+		return
 	if undo_stack.empty():
 		return
 	var op = undo_stack.pop_back()
@@ -670,6 +1028,8 @@ func _undo():
 	_set_status("Deshacer")
 
 func _redo():
+	if read_only:
+		return
 	if redo_stack.empty():
 		return
 	var op = redo_stack.pop_back()
@@ -755,3 +1115,188 @@ func _draw_preview():
 			draw_pos += ball.current_offs() * fit_scale
 			var s: Vector2 = tex.get_size() * fit_scale
 			draw_texture_rect(tex, Rect2(draw_pos, s), false)
+
+# ---- creación de packs ----
+
+func _on_open_pack():
+	_refresh_pack_available()
+	pack_panel.visible = true
+	pack_name_edit.text = attributes.get("name", "") + " pack"
+	pack_author_edit.text = attributes.get("author", "")
+	pack_desc_edit.text = ""
+	pack_name_edit.grab_focus()
+	_set_status("Crea un pack de niveles (ZIP + manifest.json)")
+
+func _on_close_pack():
+	pack_panel.visible = false
+	_set_status("")
+
+func _refresh_pack_available():
+	pack_available = []
+	var dir := Directory.new()
+	if dir.open(USER_LEVELS_DIR) == OK:
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if not dir.current_is_dir() and fname.ends_with(".txt"):
+				pack_available.append(USER_LEVELS_DIR + fname)
+			fname = dir.get_next()
+		dir.list_dir_end()
+	pack_available.sort()
+	available_list.clear()
+	for p in pack_available:
+		available_list.add_item(p.get_file())
+	pack_selected = []
+	pack_list.clear()
+
+func _pack_cur_available() -> int:
+	var sel := available_list.get_selected_items()
+	if sel.size() > 0:
+		return sel[0]
+	return -1
+
+func _pack_cur_selected() -> int:
+	var sel := pack_list.get_selected_items()
+	if sel.size() > 0:
+		return sel[0]
+	return -1
+
+func _on_pack_add():
+	var idx := _pack_cur_available()
+	if idx < 0 or idx >= pack_available.size():
+		_set_status("Selecciona un nivel disponible")
+		return
+	var path = pack_available[idx]
+	if pack_selected.has(path):
+		return
+	pack_selected.append(path)
+	pack_list.add_item(path.get_file())
+	_set_status("")
+
+func _on_pack_remove():
+	var idx := _pack_cur_selected()
+	if idx < 0 or idx >= pack_selected.size():
+		_set_status("Selecciona un nivel del pack")
+		return
+	pack_selected.remove(idx)
+	pack_list.remove_item(idx)
+	_set_status("")
+
+func _on_pack_up():
+	var idx := _pack_cur_selected()
+	if idx <= 0 or idx >= pack_selected.size():
+		return
+	_pack_swap(idx, idx - 1)
+
+func _on_pack_down():
+	var idx := _pack_cur_selected()
+	if idx < 0 or idx >= pack_selected.size() - 1:
+		return
+	_pack_swap(idx, idx + 1)
+
+func _pack_swap(a: int, b: int):
+	var tmp = pack_selected[a]
+	pack_selected[a] = pack_selected[b]
+	pack_selected[b] = tmp
+	var a_text := pack_list.get_item_text(a)
+	var b_text := pack_list.get_item_text(b)
+	pack_list.set_item_text(a, b_text)
+	pack_list.set_item_text(b, a_text)
+	pack_list.select(b)
+	pack_list.ensure_current_is_visible()
+
+func _on_create_pack():
+	var title := pack_name_edit.text.strip_edges()
+	if title == "":
+		_set_status("El pack necesita un título")
+		return
+	if pack_selected.size() == 0:
+		_set_status("Elige al menos un nivel para el pack")
+		return
+	var author := pack_author_edit.text.strip_edges()
+	if author == "":
+		_set_status("El pack necesita el autor / créditos")
+		return
+	var id := title.replace(" ", "_").to_lower()
+	for ch in ["/", "\\", ":", "*", "?", "\"", "<", ">", "|"]:
+		id = id.replace(ch, "")
+	if id == "":
+		id = "pack"
+	var level_names := []
+	for p in pack_selected:
+		level_names.append("levels/" + p.get_file())
+	var manifest := {
+		"name": title,
+		"author": author,
+		"description": pack_desc_edit.text.strip_edges(),
+		"levels": level_names,
+	}
+	var files := {}
+	files["manifest.json"] = JSON.print(manifest, "  ")
+	for p in pack_selected:
+		files["levels/" + p.get_file()] = _read_text_file(p)
+	var dir := Directory.new()
+	dir.make_dir_recursive(PACKS_DIR)
+	var zip_path := PACKS_DIR + id + ".zip"
+	if ZIPWriter.write_pack_zip(zip_path, files):
+		_set_status("Pack creado: " + zip_path)
+	else:
+		_set_status("ERROR al crear el pack")
+	pack_panel.visible = false
+
+func _read_text_file(path: String) -> String:
+	var f := File.new()
+	if f.open(path, File.READ) != OK:
+		return ""
+	var text := f.get_as_text()
+	f.close()
+	return text
+
+# ---- exportar pack ----
+
+func _on_open_export():
+	export_packs = PackReader.list_packs()
+	export_list.clear()
+	for p in export_packs:
+		export_list.add_item(p.get("name", "?") + "  —  " + p.get("author", ""))
+	export_panel.visible = true
+	_set_status("")
+
+func _on_close_export():
+	export_panel.visible = false
+	_set_status("")
+
+func _on_export_selected():
+	var idx := _pack_cur_export()
+	if idx < 0 or idx >= export_packs.size():
+		_set_status("Selecciona un pack")
+		return
+	var id: String = export_packs[idx].get("id", "")
+	if id == "":
+		return
+	dialog_open = true
+	var fd := FileDialog.new()
+	fd.mode = FileDialog.MODE_SAVE_FILE
+	fd.access = FileDialog.ACCESS_RESOURCES
+	fd.current_dir = "user://"
+	fd.current_file = id + ".zip"
+	fd.window_title = "Exportar pack"
+	fd.connect("file_selected", self, "_on_export_copy", [id])
+	fd.connect("popup_hide", self, "_on_dialog_closed")
+	add_child(fd)
+	fd.popup_centered_ratio(0.8)
+
+func _pack_cur_export() -> int:
+	var sel := export_list.get_selected_items()
+	if sel.size() > 0:
+		return sel[0]
+	return -1
+
+func _on_export_copy(target: String, id: String):
+	var src := PackReader.zip_path_for_id(id)
+	var dir := Directory.new()
+	if dir.copy(src, target) == OK:
+		_set_status("Pack exportado: " + target)
+	else:
+		_set_status("ERROR al exportar")
+	export_panel.visible = false

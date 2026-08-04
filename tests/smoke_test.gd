@@ -9,6 +9,11 @@ const BallScript = preload("res://scripts/tumbleboy/ball.gd")
 const TumbleBoyScript = preload("res://scripts/tumbleboy/tumbleboy.gd")
 const TumbleBoyScene = preload("res://scenes/TumbleBoy.tscn")
 const EditorScene = preload("res://scenes/TumbleBoyEditor.tscn")
+const LevelSelectScene = preload("res://scenes/LevelSelect.tscn")
+const MainMenuScene = preload("res://scenes/MainMenu.tscn")
+const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
+const ZipWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
+const ZipReader = preload("res://scripts/tumbleboy/zip_reader.gd")
 
 var failures := 0
 
@@ -18,6 +23,9 @@ func _ready():
 	_test_ball()
 	_test_scene()
 	_test_editor()
+	_test_zip()
+	_test_level_select()
+	_test_main_menu()
 	if failures == 0:
 		print("SMOKE TEST: ALL PASS")
 	else:
@@ -130,7 +138,7 @@ func _test_scene():
 	_check(tb.ball != null, "ball creada")
 	_check(tb.board.width > 0, "board con tamaño")
 	_check(tb.board_texture != null, "board renderizado a textura")
-	_check(tb.level_names.size() >= 21, "lista de niveles >= 21 (got %d)" % tb.level_names.size())
+	_check(tb.level_names.size() == 21, "modo historia = 21 niveles de res:// (got %d)" % tb.level_names.size())
 	for i in range(30):
 		tb._process(1.0 / 60.0)
 	_check(tb.ball.position.x >= 0.0, "física estable tras 30 frames (x=%.3f)" % tb.ball.position.x)
@@ -166,4 +174,107 @@ func _test_editor():
 	ed._select_paint(C.BLOCK_FLOOR)
 	ed._paint_cell(0, 0, false)
 	_check(ed.board.block_at(0, 0) == C.BLOCK_FLOOR, "board crece al pintar en 0,0")
+	_check(ed.paint_buttons.size() == 15, "paleta sin Piso2/Piso3 (%d bloques)" % ed.paint_buttons.size())
+	_check(ed.theme_option.get_item_text(0) == "Por defecto", "tema traducido en OptionButton")
+	_check(ed.boy_option.get_item_text(0) == "Predeterminado", "niño traducido en OptionButton")
+	ed.author_edit.text = "Tester"
+	ed.desc_edit.text = "Nivel de prueba"
+	ed._collect_fields_to_attributes()
+	_check(ed.attributes.get("author") == "Tester", "autor (créditos) a atributos")
+	_check(ed.attributes.get("instructions") == "Nivel de prueba", "descripción a atributos")
+	ed.current_file = "res://assets/tumbleboy/data/levels/01-Introduction.txt"
+	ed.read_only = true
+	ed._paint_cell(10, 4, false)
+	_check(ed.map[4][10] == C.BLOCK_NONE, "solo lectura bloquea pintar")
+	ed._on_save()
+	_check(ed.status_label.text.find("solo lectura") >= 0, "guardar en solo lectura avisa")
+	ed.read_only = false
+	ed.current_file = ""
+	ed.author_edit.text = "Tester"
+	ed._save_to("user://tumbleboy_levels/smoke_pack_level.txt")
+	_check(File.new().file_exists("user://tumbleboy_levels/smoke_pack_level.txt"), "nivel guardado a user://")
+	var zip_dir := Directory.new()
+	if zip_dir.open("user://tumbleboy_packs") == OK:
+		zip_dir.remove("smoke_pack.zip")
+	ed.pack_name_edit.text = "Smoke Pack"
+	ed.pack_author_edit.text = "Tester"
+	ed.pack_desc_edit.text = "Pack de prueba"
+	ed._refresh_pack_available()
+	_check(ed.pack_available.has("user://tumbleboy_levels/smoke_pack_level.txt"), "nivel disponible para el pack")
+	ed.pack_selected = ["user://tumbleboy_levels/smoke_pack_level.txt"]
+	ed.pack_list.add_item("smoke_pack_level.txt")
+	ed._on_create_pack()
+	_check(File.new().file_exists("user://tumbleboy_packs/smoke_pack.zip"), "pack ZIP creado")
+	var packs = PackReader.list_packs()
+	var found := false
+	for p in packs:
+		if p.get("name") == "Smoke Pack":
+			found = true
+	_check(found, "manifest del pack leído con título")
+	var lvl_text := PackReader.get_level_text("user://tumbleboy_packs/smoke_pack.zip", "levels/smoke_pack_level.txt")
+	_check(lvl_text.length() > 0, "nivel leído del ZIP")
+	var lvl = LevelsScript.parse_level_text(lvl_text)
+	_check(lvl["map"].size() > 0, "nivel del pack parseable")
+	var znames = PackReader.list_level_filenames("user://tumbleboy_packs/smoke_pack.zip")
+	_check(znames.size() == 1 and znames[0] == "levels/smoke_pack_level.txt", "get_files del ZIP")
 	ed.free()
+
+func _test_zip():
+	print("== zip ==")
+	var files := {
+		"manifest.json": "{\"name\": \"Z\", \"author\": \"T\"}",
+		"levels/a.txt": ".name {A}\n!!!\n---- \n!!!\n",
+		"levels/b.txt": ".name {B}\n!!!\n-1-$ \n!!!\n",
+	}
+	var zp := "user://smoke_roundtrip.zip"
+	var dir := Directory.new()
+	dir.remove(zp)
+	_check(ZipWriter.write_pack_zip(zp, files), "write_pack_zip guarda")
+	var names = ZipReader.get_files(zp)
+	_check(names.size() == 3, "get_files devuelve %d archivos (3)" % names.size())
+	var manifest = ZipReader.read_file(zp, "manifest.json")
+	_check(manifest != null and manifest.get_string_from_utf8().find("Z") >= 0, "read_file lee manifest")
+	var b = ZipReader.read_file(zp, "levels/b.txt")
+	_check(b != null and b.get_string_from_utf8().find(".name {B}") >= 0, "read_file lee nivel con contenido")
+	dir.remove(zp)
+
+func _test_level_select():
+	print("== level select ==")
+	LevelQueue.clear()
+	LevelQueue.play_levels(["user://a.txt", "user://b.txt"], "Prueba")
+	_check(LevelQueue.paths.size() == 2 and LevelQueue.return_scene == "res://scenes/LevelSelect.tscn", "LevelQueue guarda secuencia y vuelta al selector")
+	LevelQueue.clear()
+	var ls = LevelSelectScene.instance()
+	add_child(ls)
+	_check(ls.store != null, "selector crea PackStore")
+	_check(ls.pack_buttons.has("smoke_pack"), "pack del editor visible en el selector")
+	var users = ls._list_user_levels()
+	_check(users.has("user://tumbleboy_levels/smoke_pack_level.txt"), "niveles de usuario listados")
+	var bcount := 0
+	for ch in ls.menu_vbox.get_children():
+		if ch is Button:
+			bcount += 1
+	_check(bcount >= 4, "menú del selector con botones (got %d)" % bcount)
+	ls.free()
+
+func _test_main_menu():
+	print("== main menu ==")
+	var mm = MainMenuScene.instance()
+	add_child(mm)
+	var vbox: VBoxContainer = null
+	for ch in mm.get_children():
+		if ch is VBoxContainer:
+			vbox = ch
+			break
+	_check(vbox != null, "menú tiene VBoxContainer")
+	var texts := []
+	if vbox != null:
+		for ch in vbox.get_children():
+			texts.append(ch.text)
+	_check(texts.size() == 6, "menú: título+subtítulo+3 botones+hint (got %d)" % texts.size())
+	_check(texts.has("TUMBLEBOY REBORN"), "título TumbleBoy presente")
+	_check(texts.has("Niveles y packs"), "botón Niveles y packs presente")
+	_check(texts.has("Editor de niveles"), "botón Editor de niveles presente")
+	_check(texts.has("Jugar — TumbleBoy (historia)"), "botón Jugar historia presente")
+	_check(ProjectSettings.get_setting("application/config/name") == "TumbleBoy Reborn", "nombre del proyecto = TumbleBoy Reborn")
+	mm.free()

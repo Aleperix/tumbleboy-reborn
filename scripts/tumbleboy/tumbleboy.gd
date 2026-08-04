@@ -91,12 +91,22 @@ func _unhandled_input(ev):
 			_go_to_menu()
 
 func _go_to_menu():
+	if LevelQueue.return_scene != "":
+		var target := LevelQueue.return_scene
+		LevelQueue.clear()
+		get_tree().change_scene(target)
+		return
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
 
 func _start_playing():
 	_state_clear()
+	if LevelQueue.paths.size() > 0:
+		level_names = []
+		level_names.append_array(LevelQueue.paths)
+		LevelQueue.clear()
+	else:
+		_load_level_list()
 	next_level = 0
-	_load_level_list()
 	_load_next_level()
 	state = State.PLAYING
 
@@ -110,17 +120,18 @@ func _win_level():
 	wait_timer = 3.5
 
 func _load_level_list():
+	# Modo historia nostálgico: SOLO los 21 niveles originales de res://,
+	# sin cambios. Los niveles de usuario y packs van por el selector.
 	level_names = []
-	for dir_path in [C.LEVELS_DIR, "user://tumbleboy_levels/"]:
-		var dir := Directory.new()
-		if dir.open(dir_path) == OK:
-			dir.list_dir_begin()
-			var fname := dir.get_next()
-			while fname != "":
-				if not dir.current_is_dir() and fname.ends_with(".txt"):
-					level_names.append(dir_path + fname)
-				fname = dir.get_next()
-			dir.list_dir_end()
+	var dir := Directory.new()
+	if dir.open(C.LEVELS_DIR) == OK:
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if not dir.current_is_dir() and fname.ends_with(".txt"):
+				level_names.append(C.LEVELS_DIR + fname)
+			fname = dir.get_next()
+		dir.list_dir_end()
 	level_names.sort()
 	next_level = 0
 
@@ -149,6 +160,8 @@ func _load_level(filename: String):
 	var info = LevelsScript.parse_level(filename)
 	var attributes = info["attributes"]
 	var level_map = info["map"]
+	if attributes.has("name") and str(attributes["name"]) != "":
+		level_label.text = str(attributes["name"])
 	if attributes.has("boy"):
 		ball.set_theme(attributes["boy"])
 	if attributes.has("theme"):

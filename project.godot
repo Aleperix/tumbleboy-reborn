@@ -10,7 +10,7 @@ config_version=4
 
 [application]
 
-config/name="Lost Games XO"
+config/name="TumbleBoy Reborn"
 run/main_scene="res://scenes/MainMenu.tscn"
 config/icon="res://icon.svg"
 
@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 AudioManager="*res://autoload/audio_manager.gd"
 SaveData="*res://autoload/save_data.gd"
 InputManager="*res://autoload/input_manager.gd"
+LevelQueue="*res://autoload/level_queue.gd"
 
 [display]
 

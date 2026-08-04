@@ -1,0 +1,9 @@
+[
+  {
+    "id": "primer_contacto",
+    "name": "Primer contacto",
+    "author": "Aleperix",
+    "description": "Nivel de ejemplo del repo para probar la descarga de packs.",
+    "thumbnail": "packs/primer_contacto.png"
+  }
+]

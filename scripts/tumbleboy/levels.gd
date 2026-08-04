@@ -41,11 +41,17 @@ static func parse_level(level_file: String) -> Dictionary:
 	if not f.file_exists(level_file):
 		return { "attributes": {}, "map": [] }
 	f.open(level_file, File.READ)
+	var content := f.get_as_text()
+	f.close()
+	return parse_level_text(content)
+
+# Parsea un nivel desde texto (para packs leídos en memoria desde un ZIP).
+static func parse_level_text(content: String) -> Dictionary:
 	var attributes := {}
 	var level_map: Array = []
 	var in_level := false
-	while not f.eof_reached():
-		var line: String = f.get_line()
+	for line_raw in content.split("\n"):
+		var line: String = line_raw.replace("\r", "")
 		if in_level:
 			if line.begins_with("!!!"):
 				in_level = false
@@ -66,7 +72,6 @@ static func parse_level(level_file: String) -> Dictionary:
 					attributes[attr[0]] = attr[1]
 			if line.begins_with("!!!"):
 				in_level = true
-	f.close()
 	return { "attributes": attributes, "map": level_map }
 
 static func _parse_attribute(line: String):

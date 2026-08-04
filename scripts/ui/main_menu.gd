@@ -1,15 +1,12 @@
 extends Control
-# MainMenu — lanzador nostálgico estilo "JUEGOS DE LA ÉPOCA DE LAS XO / CEIBALITAS".
+# MainMenu — TumbleBoy Reborn: lanzador nostálgico (Jugar / Niveles y packs / Editor).
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 
 const GAMES := [
-	{ "id": "tumbleboy", "name": "TumbleBoy", "scene": "res://scenes/TumbleBoy.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
-	{ "id": "tumbleboy_editor", "name": "Editor de niveles (TumbleBoy)", "scene": "res://scenes/TumbleBoyEditor.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
-	{ "id": "redbird", "name": "RedBird", "scene": "res://scenes/RedBird.tscn", "icon": "res://assets/redbird/icon.png", "enabled": false },
-	{ "id": "fruitix", "name": "Fruitix", "scene": "res://scenes/Fruitix.tscn", "icon": "res://assets/fruitix/icon.png", "enabled": false },
-	{ "id": "headcat", "name": "HeadCat", "scene": "res://scenes/HeadCat.tscn", "icon": "res://assets/headcat/icon.png", "enabled": false },
-	{ "id": "jump", "name": "Jump", "scene": "res://scenes/Jump.tscn", "icon": "res://assets/jump/icon.png", "enabled": false },
+	{ "id": "play", "name": "Jugar — TumbleBoy (historia)", "scene": "res://scenes/TumbleBoy.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
+	{ "id": "levels", "name": "Niveles y packs", "scene": "res://scenes/LevelSelect.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
+	{ "id": "editor", "name": "Editor de niveles", "scene": "res://scenes/TumbleBoyEditor.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
 ]
 
 var buttons: Array = []
@@ -33,7 +30,7 @@ func _build_ui():
 	add_child(vbox)
 
 	var title := Label.new()
-	title.text = "JUEGOS DE LA ÉPOCA DE LAS XO / CEIBALITAS"
+	title.text = "TUMBLEBOY REBORN"
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
 	title.add_font_override("font", UIFonts.make_font(34, true))
 	title.align = Label.ALIGN_CENTER
@@ -41,7 +38,7 @@ func _build_ui():
 	vbox.add_child(title)
 
 	var sub := Label.new()
-	sub.text = "Lost Media Collection — port a Godot"
+	sub.text = "La reencarnación del juego perdido de las XO / Ceibalitas"
 	sub.add_color_override("font_color", Color(0.6, 0.55, 0.7))
 	sub.align = Label.ALIGN_CENTER
 	sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
