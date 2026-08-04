@@ -12,6 +12,8 @@ var niveles_panel: Control
 var packs_panel: Control
 var niveles_vbox: VBoxContainer
 var packs_vbox: VBoxContainer
+var niveles_scroll: ScrollContainer
+var packs_scroll: ScrollContainer
 var hub_buttons: Array = []
 var niveles_back: Button
 var packs_create: Button
@@ -144,6 +146,7 @@ func _build_niveles():
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(500, 0)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.add_child(col)
 
 	var title := Label.new()
@@ -153,10 +156,17 @@ func _build_niveles():
 	title.align = Label.ALIGN_CENTER
 	col.add_child(title)
 
+	niveles_scroll = ScrollContainer.new()
+	niveles_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	niveles_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	niveles_scroll.scroll_horizontal_enabled = false
+	col.add_child(niveles_scroll)
+
 	niveles_vbox = VBoxContainer.new()
 	niveles_vbox.alignment = BoxContainer.ALIGN_CENTER
 	niveles_vbox.add_constant_override("separation", 4)
-	col.add_child(niveles_vbox)
+	niveles_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	niveles_scroll.add_child(niveles_vbox)
 
 	var spacer := Control.new()
 	spacer.rect_min_size = Vector2(0, 8)
@@ -210,6 +220,7 @@ func _refresh_niveles():
 		l.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 		l.align = Label.ALIGN_CENTER
 		niveles_vbox.add_child(l)
+		_wire_scroll_follow(niveles_scroll, niveles_vbox)
 		return
 	for path in files:
 		var info = LevelsScript.parse_level(path)
@@ -260,6 +271,7 @@ func _refresh_niveles():
 		btn_hb.add_child(del_btn)
 		row.add_child(btn_hb)
 		niveles_vbox.add_child(row)
+	_wire_scroll_follow(niveles_scroll, niveles_vbox)
 
 func _list_user_levels() -> Array:
 	var result := []
@@ -336,6 +348,7 @@ func _build_packs():
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(500, 0)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.add_child(col)
 
 	var title := Label.new()
@@ -345,10 +358,17 @@ func _build_packs():
 	title.align = Label.ALIGN_CENTER
 	col.add_child(title)
 
+	packs_scroll = ScrollContainer.new()
+	packs_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	packs_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	packs_scroll.scroll_horizontal_enabled = false
+	col.add_child(packs_scroll)
+
 	packs_vbox = VBoxContainer.new()
 	packs_vbox.alignment = BoxContainer.ALIGN_CENTER
 	packs_vbox.add_constant_override("separation", 6)
-	col.add_child(packs_vbox)
+	packs_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	packs_scroll.add_child(packs_vbox)
 
 	var spacer := Control.new()
 	spacer.rect_min_size = Vector2(0, 6)
@@ -394,6 +414,7 @@ func _refresh_packs():
 		l.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 		l.align = Label.ALIGN_CENTER
 		packs_vbox.add_child(l)
+		_wire_scroll_follow(packs_scroll, packs_vbox)
 		return
 	for p in local:
 		var id: String = str(p.get("id", ""))
@@ -410,6 +431,7 @@ func _refresh_packs():
 		del_btn.connect("pressed", self, "_on_delete_pack", [id])
 		var row = PackRow.make(p, thumb, [play_btn, del_btn])
 		packs_vbox.add_child(row)
+	_wire_scroll_follow(packs_scroll, packs_vbox)
 
 func _on_play_pack(p: Dictionary):
 	var id: String = str(p.get("id", ""))
@@ -449,6 +471,13 @@ func _grab_first_button(root: Node) -> bool:
 		if _grab_first_button(ch):
 			return true
 	return false
+
+func _wire_scroll_follow(scroll: ScrollContainer, root: Node):
+	for ch in root.get_children():
+		if ch is Button and not ch.is_connected("focus_entered", scroll, "ensure_control_visible"):
+			ch.connect("focus_entered", scroll, "ensure_control_visible", [ch])
+		if ch.get_child_count() > 0:
+			_wire_scroll_follow(scroll, ch)
 
 func _on_open_niveles():
 	hub_panel.visible = false

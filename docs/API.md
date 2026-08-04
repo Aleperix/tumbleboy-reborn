@@ -381,9 +381,13 @@ Packs comunitarios: menú → **Packs descargados** / **Packs online** / Volver.
   llama `PackReader.remove_pack(id)` + `SaveData.clear_pack(id)` y refresca.
 - `_on_pack_downloaded(id, ok, msg)` — si ok: `SaveData.mark_pack_downloaded(id)`
   y re-renderiza.
+- Cada lista (descargados/online) vive dentro de un `ScrollContainer`
+  (`desc_scroll`, `online_scroll`) con foco-follow: al navegar con flechas/D-pad
+  el scroll sigue al botón enfocado (`_wire_scroll_follow`).
 - Variables: `store`, `menu_panel`, `descargados_panel`, `online_panel`,
-  `desc_vbox`, `online_vbox`, `online_status`, `entries`, `download_dialog`,
-  `uninstall_dialog`, `pending_download`, `pending_uninstall`.
+  `desc_scroll`, `online_scroll`, `desc_vbox`, `online_vbox`, `online_status`,
+  `entries`, `download_dialog`, `uninstall_dialog`, `pending_download`,
+  `pending_uninstall`.
 
 ### editor_hub.gd
 
@@ -403,8 +407,12 @@ Editor de niveles: **Niveles propios** (con Borrador arriba si existe) / **Packs
 - `_on_delete_pack(id)` — `ConfirmationDialog` → `PackReader.remove_pack(id)` y refresca.
 - `_on_create_pack()` — abre el editor y llama `editor.open_pack_panel()`.
 - `_on_new_level()` — abre el editor vacío.
-- Variables: `hub_panel`, `niveles_panel`, `packs_panel`, `niveles_vbox`,
-  `packs_vbox`, `delete_dialog`, `pending_delete`.
+- Cada lista (niveles/packs propios) vive dentro de un `ScrollContainer`
+  (`niveles_scroll`, `packs_scroll`) con foco-follow igual que
+  `packs_community.gd`.
+- Variables: `hub_panel`, `niveles_panel`, `packs_panel`, `niveles_scroll`,
+  `packs_scroll`, `niveles_vbox`, `packs_vbox`, `delete_dialog`,
+  `pending_delete`.
 
 ### ui_fonts.gd
 

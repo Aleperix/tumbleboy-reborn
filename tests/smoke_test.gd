@@ -382,6 +382,8 @@ func _test_packs_community():
 	add_child(pc)
 	_check(pc.store != null, "PackCommunity crea PackStore")
 	_check(pc.menu_panel != null and pc.descargados_panel != null and pc.online_panel != null, "3 paneles creados")
+	_check(pc.desc_scroll != null and pc.desc_scroll is ScrollContainer, "descargados dentro de ScrollContainer")
+	_check(pc.online_scroll != null and pc.online_scroll is ScrollContainer, "online dentro de ScrollContainer")
 	_check(pc.menu_panel.visible, "menú visible al inicio")
 	pc._on_open_descargados()
 	_check(pc.descargados_panel.visible, "abrir descargados conmuta panel")
@@ -396,8 +398,12 @@ func _test_editor_hub():
 	var eh = EditorHubScene.instance()
 	add_child(eh)
 	_check(eh.hub_panel != null and eh.niveles_panel != null and eh.packs_panel != null, "EditorHub con 3 paneles")
+	_check(eh.niveles_scroll != null and eh.niveles_scroll is ScrollContainer, "niveles propios dentro de ScrollContainer")
+	_check(eh.packs_scroll != null and eh.packs_scroll is ScrollContainer, "packs propios dentro de ScrollContainer")
 	eh._on_open_niveles()
 	_check(eh.niveles_panel.visible, "abrir niveles propios conmuta panel")
+	var wired := _count_wired(eh.niveles_vbox, eh.niveles_scroll)
+	_check(wired > 0, "botones conectados a ensure_control_visible (got %d)" % wired)
 	eh._on_close_niveles()
 	eh._on_open_packs()
 	_check(eh.packs_panel.visible, "abrir packs propios conmuta panel")
@@ -648,6 +654,14 @@ func _find_text(root: Node, needle: String) -> bool:
 		if _find_text(ch, needle):
 			return true
 	return false
+
+func _count_wired(root: Node, scroll: ScrollContainer) -> int:
+	var count := 0
+	for ch in root.get_children():
+		if ch is Button and ch.is_connected("focus_entered", scroll, "ensure_control_visible"):
+			count += 1
+		count += _count_wired(ch, scroll)
+	return count
 
 func _back_button_of(root: Node) -> Control:
 	for ch in root.get_children():

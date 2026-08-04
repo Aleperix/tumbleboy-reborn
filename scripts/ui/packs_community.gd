@@ -12,6 +12,8 @@ var descargados_panel: Control
 var online_panel: Control
 var desc_vbox: VBoxContainer
 var online_vbox: VBoxContainer
+var desc_scroll: ScrollContainer
+var online_scroll: ScrollContainer
 var online_status: Label
 var entries: Array = []
 var pack_buttons: Dictionary = {}
@@ -145,6 +147,7 @@ func _build_descargados():
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(600, 0)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.add_child(col)
 
 	var title := Label.new()
@@ -154,10 +157,17 @@ func _build_descargados():
 	title.align = Label.ALIGN_CENTER
 	col.add_child(title)
 
+	desc_scroll = ScrollContainer.new()
+	desc_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	desc_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_scroll.scroll_horizontal_enabled = false
+	col.add_child(desc_scroll)
+
 	desc_vbox = VBoxContainer.new()
 	desc_vbox.alignment = BoxContainer.ALIGN_CENTER
 	desc_vbox.add_constant_override("separation", 6)
-	col.add_child(desc_vbox)
+	desc_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	desc_scroll.add_child(desc_vbox)
 
 	var spacer := Control.new()
 	spacer.rect_min_size = Vector2(0, 8)
@@ -201,6 +211,7 @@ func _refresh_descargados():
 		uninstall_btn.connect("pressed", self, "_on_uninstall", [id])
 		var row = PackRow.make(p, thumb, [play_btn, uninstall_btn])
 		desc_vbox.add_child(row)
+	_wire_scroll_follow(desc_scroll, desc_vbox)
 
 func _on_pack_play(p: Dictionary):
 	var id: String = str(p.get("id", ""))
@@ -227,6 +238,7 @@ func _build_online():
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(700, 0)
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.add_child(col)
 
 	var title := Label.new()
@@ -243,10 +255,17 @@ func _build_online():
 	online_status.align = Label.ALIGN_CENTER
 	col.add_child(online_status)
 
+	online_scroll = ScrollContainer.new()
+	online_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	online_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	online_scroll.scroll_horizontal_enabled = false
+	col.add_child(online_scroll)
+
 	online_vbox = VBoxContainer.new()
 	online_vbox.alignment = BoxContainer.ALIGN_CENTER
 	online_vbox.add_constant_override("separation", 10)
-	col.add_child(online_vbox)
+	online_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	online_scroll.add_child(online_vbox)
 
 	var spacer := Control.new()
 	spacer.rect_min_size = Vector2(0, 6)
@@ -285,9 +304,17 @@ func _render_online():
 		return
 	for e in entries:
 		online_vbox.add_child(_online_row(e))
+	_wire_scroll_follow(online_scroll, online_vbox)
 	if online_panel.visible:
 		if not _grab_first_button(online_vbox):
 			online_refresh.grab_focus()
+
+func _wire_scroll_follow(scroll: ScrollContainer, root: Node):
+	for ch in root.get_children():
+		if ch is Button and not ch.is_connected("focus_entered", scroll, "ensure_control_visible"):
+			ch.connect("focus_entered", scroll, "ensure_control_visible", [ch])
+		if ch.get_child_count() > 0:
+			_wire_scroll_follow(scroll, ch)
 
 func _online_row(e: Dictionary) -> Control:
 	var id: String = e.get("id", "")
