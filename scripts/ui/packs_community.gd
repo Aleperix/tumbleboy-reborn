@@ -139,7 +139,7 @@ func _build_descargados():
 	bg2.set_anchors_preset(Control.PRESET_WIDE)
 	descargados_panel.add_child(bg2)
 
-	var center := CenterContainer.new()
+	var center := VBoxContainer.new()
 	center.set_anchors_preset(Control.PRESET_WIDE)
 	descargados_panel.add_child(center)
 
@@ -148,6 +148,7 @@ func _build_descargados():
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(600, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
 
 	var title := Label.new()
@@ -230,7 +231,7 @@ func _build_online():
 	bg3.set_anchors_preset(Control.PRESET_WIDE)
 	online_panel.add_child(bg3)
 
-	var center := CenterContainer.new()
+	var center := VBoxContainer.new()
 	center.set_anchors_preset(Control.PRESET_WIDE)
 	online_panel.add_child(center)
 
@@ -239,6 +240,7 @@ func _build_online():
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(700, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
 
 	var title := Label.new()

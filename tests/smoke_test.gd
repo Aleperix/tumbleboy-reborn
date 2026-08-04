@@ -46,6 +46,7 @@ func _ready():
 	_test_hub_draft_section()
 	_test_descargados_buttons()
 	_test_propios_buttons()
+	yield(_test_list_layout(), "completed")
 	_test_game_icon()
 	_test_pack_row()
 	yield(get_tree(), "idle_frame")
@@ -397,9 +398,6 @@ func _test_editor_hub():
 	print("== editor hub ==")
 	var eh = EditorHubScene.instance()
 	add_child(eh)
-	_check(eh.hub_panel != null and eh.niveles_panel != null and eh.packs_panel != null, "EditorHub con 3 paneles")
-	_check(eh.niveles_scroll != null and eh.niveles_scroll is ScrollContainer, "niveles propios dentro de ScrollContainer")
-	_check(eh.packs_scroll != null and eh.packs_scroll is ScrollContainer, "packs propios dentro de ScrollContainer")
 	eh._on_open_niveles()
 	_check(eh.niveles_panel.visible, "abrir niveles propios conmuta panel")
 	var wired := _count_wired(eh.niveles_vbox, eh.niveles_scroll)
@@ -626,6 +624,40 @@ func _test_propios_buttons():
 	var eh = EditorHubScene.instance()
 	add_child(eh)
 	_check(eh.delete_dialog == null, "delete_dialog se crea bajo demanda")
+	eh.free()
+
+func _wait_scroll_height(scroll: ScrollContainer) -> float:
+	for i in range(5):
+		yield(get_tree(), "idle_frame")
+		if scroll.get_size().y > 0.0:
+			return scroll.get_size().y
+	return scroll.get_size().y
+
+func _test_list_layout():
+	print("== list layout: scroll con altura visible ==")
+	var pc = PacksCommunityScene.instance()
+	add_child(pc)
+	pc.rect_min_size = Vector2(1200, 825)
+	pc._on_open_descargados()
+	var dh = yield(_wait_scroll_height(pc.desc_scroll), "completed")
+	_check(dh > 0.0, "desc_scroll con altura (got %.1f)" % dh)
+	pc._on_close_descargados()
+	pc._on_open_online()
+	var oh = yield(_wait_scroll_height(pc.online_scroll), "completed")
+	_check(oh > 0.0, "online_scroll con altura (got %.1f)" % oh)
+	_check(pc.online_vbox.get_child_count() > 0, "online_vbox con filas (got %d)" % pc.online_vbox.get_child_count())
+	pc.free()
+
+	var eh = EditorHubScene.instance()
+	add_child(eh)
+	eh.rect_min_size = Vector2(1200, 825)
+	eh._on_open_niveles()
+	var nh = yield(_wait_scroll_height(eh.niveles_scroll), "completed")
+	_check(nh > 0.0, "niveles_scroll con altura (got %.1f)" % nh)
+	eh._on_close_niveles()
+	eh._on_open_packs()
+	var ph = yield(_wait_scroll_height(eh.packs_scroll), "completed")
+	_check(ph > 0.0, "packs_scroll con altura (got %.1f)" % ph)
 	eh.free()
 
 func _test_game_icon():

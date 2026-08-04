@@ -138,7 +138,7 @@ func _build_niveles():
 	bg2.set_anchors_preset(Control.PRESET_WIDE)
 	niveles_panel.add_child(bg2)
 
-	var center := CenterContainer.new()
+	var center := VBoxContainer.new()
 	center.set_anchors_preset(Control.PRESET_WIDE)
 	niveles_panel.add_child(center)
 
@@ -147,6 +147,7 @@ func _build_niveles():
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(500, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
 
 	var title := Label.new()
@@ -340,7 +341,7 @@ func _build_packs():
 	bg3.set_anchors_preset(Control.PRESET_WIDE)
 	packs_panel.add_child(bg3)
 
-	var center := CenterContainer.new()
+	var center := VBoxContainer.new()
 	center.set_anchors_preset(Control.PRESET_WIDE)
 	packs_panel.add_child(center)
 
@@ -349,6 +350,7 @@ func _build_packs():
 	col.add_constant_override("separation", 6)
 	col.rect_min_size = Vector2(500, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
 
 	var title := Label.new()
