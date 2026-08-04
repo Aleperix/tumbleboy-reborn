@@ -1,8 +1,11 @@
 extends Control
 # MainMenu — lanzador nostálgico estilo "JUEGOS DE LA ÉPOCA DE LAS XO / CEIBALITAS".
 
+const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
+
 const GAMES := [
 	{ "id": "tumbleboy", "name": "TumbleBoy", "scene": "res://scenes/TumbleBoy.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
+	{ "id": "tumbleboy_editor", "name": "Editor de niveles (TumbleBoy)", "scene": "res://scenes/TumbleBoyEditor.tscn", "icon": "res://assets/tumbleboy/icon.png", "enabled": true },
 	{ "id": "redbird", "name": "RedBird", "scene": "res://scenes/RedBird.tscn", "icon": "res://assets/redbird/icon.png", "enabled": false },
 	{ "id": "fruitix", "name": "Fruitix", "scene": "res://scenes/Fruitix.tscn", "icon": "res://assets/fruitix/icon.png", "enabled": false },
 	{ "id": "headcat", "name": "HeadCat", "scene": "res://scenes/HeadCat.tscn", "icon": "res://assets/headcat/icon.png", "enabled": false },
@@ -32,7 +35,7 @@ func _build_ui():
 	var title := Label.new()
 	title.text = "JUEGOS DE LA ÉPOCA DE LAS XO / CEIBALITAS"
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
-	title.add_font_override("font", _make_font(34))
+	title.add_font_override("font", UIFonts.make_font(34, true))
 	title.align = Label.ALIGN_CENTER
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(title)
@@ -76,11 +79,6 @@ func _build_ui():
 
 func _on_game_pressed(g: Dictionary):
 	get_tree().change_scene(g["scene"])
-
-func _make_font(size: int) -> DynamicFont:
-	var f := DynamicFont.new()
-	f.size = size
-	return f
 
 func _input(ev):
 	if ev is InputEventKey and ev.pressed and not ev.echo:

@@ -6,6 +6,7 @@ const BoardScript = preload("res://scripts/tumbleboy/board.gd")
 const BallScript = preload("res://scripts/tumbleboy/ball.gd")
 const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
 const TouchControlsScene = preload("res://scenes/TouchControls.tscn")
+const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 
 enum State { MENU, PLAYING, WIN_GAME }
 
@@ -14,7 +15,6 @@ var state: int = State.MENU
 var board = null
 var ball = null
 var board_texture: Texture = null
-var block_images: Array = []
 
 var level_names: Array = []
 var next_level := 0
@@ -31,6 +31,8 @@ var menu_anim2: Texture = null
 var win_anim1: Texture = null
 var win_anim2: Texture = null
 var good_job_image: Texture = null
+
+var hint_font: Font
 
 var level_label: Label
 
@@ -102,7 +104,6 @@ func _state_clear():
 	ball = null
 	board.clear()
 	board_texture = null
-	block_images = []
 
 func _win_level():
 	AudioManager.play_sfx(C.SOUNDS_DIR + "win_level.ogg")
@@ -110,15 +111,16 @@ func _win_level():
 
 func _load_level_list():
 	level_names = []
-	var dir := Directory.new()
-	if dir.open(C.LEVELS_DIR) == OK:
-		dir.list_dir_begin()
-		var fname := dir.get_next()
-		while fname != "":
-			if not dir.current_is_dir() and fname.ends_with(".txt"):
-				level_names.append(C.LEVELS_DIR + fname)
-			fname = dir.get_next()
-		dir.list_dir_end()
+	for dir_path in [C.LEVELS_DIR, "user://tumbleboy_levels/"]:
+		var dir := Directory.new()
+		if dir.open(dir_path) == OK:
+			dir.list_dir_begin()
+			var fname := dir.get_next()
+			while fname != "":
+				if not dir.current_is_dir() and fname.ends_with(".txt"):
+					level_names.append(dir_path + fname)
+				fname = dir.get_next()
+			dir.list_dir_end()
 	level_names.sort()
 	next_level = 0
 
@@ -143,7 +145,6 @@ func _load_level(filename: String):
 	ball = BallScript.new()
 	board.clear()
 	board_texture = null
-	block_images = []
 
 	var info = LevelsScript.parse_level(filename)
 	var attributes = info["attributes"]
@@ -165,59 +166,7 @@ func _load_level(filename: String):
 	_render_board_image()
 
 func _render_board_image():
-	_load_block_images()
-	var iw := int(board.width * C.PIXEL_SIZE + C.PIXEL_BORDER)
-	var ih := int(board.height * C.PIXEL_SIZE + C.PIXEL_BORDER)
-	if iw <= 0 or ih <= 0:
-		board_texture = null
-		return
-	var img: Image = Image.new()
-	img.create(iw, ih, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var blocksize := int(C.PIXEL_SIZE + C.PIXEL_BORDER)
-	for y in range(board.height):
-		for x in range(board.width):
-			var t = board.block_at(x, y)
-			if t >= 0 and t < block_images.size():
-				var tile: Texture = block_images[t]
-				if tile != null:
-					var tile_img: Image = tile.get_data()
-					img.blend_rect(tile_img, Rect2(0, 0, tile_img.get_width(), tile_img.get_height()), Vector2(int(x * C.PIXEL_SIZE), int(y * C.PIXEL_SIZE)))
-	var it := ImageTexture.new()
-	it.create_from_image(img)
-	board_texture = it
-
-func _load_block_images():
-	block_images = []
-	var names := [
-		"", "floor.png", "floor2.png", "floor3.png",
-		"wall.png", "wall2.png", "wall3.png",
-		"doublewall.png", "doublewall2.png", "doublewall3.png",
-		"startfloor.png", "goal.png",
-		"rampright.png", "rampleft.png", "rampup.png", "rampdown.png",
-		"bumper.png", ""
-	]
-	var size := int(C.PIXEL_SIZE + C.PIXEL_BORDER)
-	for name in names:
-		if name == "":
-			block_images.append(null)
-			continue
-		var path = C.THEMES_DIR + board.theme + "/" + name
-		if ResourceLoader.exists(path):
-			var tex = load(path)
-			if tex is Texture:
-				if tex.get_size() != Vector2(size, size):
-					var img: Image = tex.get_data()
-					img.resize(size, size, Image.INTERPOLATE_BILINEAR)
-					var it := ImageTexture.new()
-					it.create_from_image(img)
-					block_images.append(it)
-				else:
-					block_images.append(tex)
-			else:
-				block_images.append(null)
-		else:
-			block_images.append(null)
+	board_texture = board.render_board_image()
 
 func _get_screen_offset() -> Vector2:
 	if ball == null:
@@ -303,10 +252,6 @@ func _draw_game():
 			draw_texture_rect(good_job_image, Rect2(Vector2(600 - size.x * 0.5, 412.5 - size.y * 0.5), size), false)
 
 func _draw_hint():
-	var f := _make_font(20)
-	draw_string(f, Vector2(C.GAME_OFFSET_X + 20, C.SCREEN_H - 20), "B / ESC: menú", Color(1, 1, 1, 0.6))
-
-func _make_font(size: int) -> DynamicFont:
-	var f := DynamicFont.new()
-	f.size = size
-	return f
+	if hint_font == null:
+		hint_font = UIFonts.make_font(20)
+	draw_string(hint_font, Vector2(C.GAME_OFFSET_X + 20, C.SCREEN_H - 20), "B / ESC: menú", Color(1, 1, 1, 0.6))

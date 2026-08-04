@@ -8,6 +8,7 @@ const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
 const BallScript = preload("res://scripts/tumbleboy/ball.gd")
 const TumbleBoyScript = preload("res://scripts/tumbleboy/tumbleboy.gd")
 const TumbleBoyScene = preload("res://scenes/TumbleBoy.tscn")
+const EditorScene = preload("res://scenes/TumbleBoyEditor.tscn")
 
 var failures := 0
 
@@ -16,6 +17,7 @@ func _ready():
 	_test_board()
 	_test_ball()
 	_test_scene()
+	_test_editor()
 	if failures == 0:
 		print("SMOKE TEST: ALL PASS")
 	else:
@@ -52,6 +54,29 @@ func _test_levels():
 		rows += 1
 		total += row.size()
 	_check(rows == 5 and total == 5 * 12, "nivel 1 es 5x12 (%dx%d)" % [rows, total])
+
+	_test_write_level(l1)
+
+func _test_write_level(l1: Dictionary):
+	var attrs := { "name": "Smoke", "author": "Test", "theme": "default", "boy": "boy1" }
+	var map2: Array = []
+	for row in l1["map"]:
+		var nr: Array = []
+		nr.append_array(row)
+		map2.append(nr)
+	var tmp := "user://smoke_write_level.txt"
+	var saved := LevelsScript.write_level(tmp, attrs, map2)
+	_check(saved, "write_level guarda a user://")
+	var back: Dictionary = LevelsScript.parse_level(tmp)
+	_check(back["attributes"].has("name") and back["attributes"]["name"] == "Smoke", "atributos sobreviven al round-trip")
+	_check(back["map"].size() == map2.size(), "mismo nº de filas tras round-trip")
+	var equal := true
+	for i in range(map2.size()):
+		if back["map"][i] != map2[i]:
+			equal = false
+	_check(equal, "mapa idéntico tras round-trip")
+	var dir := Directory.new()
+	dir.remove(tmp)
 
 func _test_board():
 	print("== board ==")
@@ -105,7 +130,40 @@ func _test_scene():
 	_check(tb.ball != null, "ball creada")
 	_check(tb.board.width > 0, "board con tamaño")
 	_check(tb.board_texture != null, "board renderizado a textura")
-	_check(tb.level_names.size() == 21, "lista de niveles = 21")
+	_check(tb.level_names.size() >= 21, "lista de niveles >= 21 (got %d)" % tb.level_names.size())
 	for i in range(30):
 		tb._process(1.0 / 60.0)
 	_check(tb.ball.position.x >= 0.0, "física estable tras 30 frames (x=%.3f)" % tb.ball.position.x)
+
+func _test_editor():
+	print("== editor ==")
+	var ed = EditorScene.instance()
+	add_child(ed)
+	_check(ed.map.size() == 5 and ed.map[0].size() == 12, "nuevo nivel es 5x12")
+	_check(ed.board.width == 12 and ed.board.height == 5, "board con dimensiones lógicas (12x5)")
+	ed._paint_cell(3, 2, false)
+	_check(ed.map[2][3] == C.BLOCK_FLOOR, "pintar piso en (3,2)")
+	_check(ed.board.block_at(3, 2) == C.BLOCK_FLOOR, "board refleja el bloque pintado")
+	ed._select_paint(C.BLOCK_START)
+	ed._paint_cell(1, 1, false)
+	ed._paint_cell(8, 4, false)
+	var starts := 0
+	for row in ed.map:
+		for cell in row:
+			if cell == C.BLOCK_START:
+				starts += 1
+	_check(starts == 1, "solo un bloque Inicio a la vez")
+	_check(ed._validate_map() != "", "sin Meta: nivel inválido")
+	ed._select_paint(C.BLOCK_GOAL)
+	ed._paint_cell(9, 4, false)
+	_check(ed._validate_map() == "", "con $ y 1: nivel válido")
+	ed._paint_cell(3, 2, true)
+	_check(ed.map[2][3] == C.BLOCK_NONE, "borrar con erase=true")
+	ed._undo()
+	_check(ed.map[2][3] == C.BLOCK_FLOOR, "undo restaura el piso")
+	ed._redo()
+	_check(ed.map[2][3] == C.BLOCK_NONE, "redo vuelve a borrar")
+	ed._select_paint(C.BLOCK_FLOOR)
+	ed._paint_cell(0, 0, false)
+	_check(ed.board.block_at(0, 0) == C.BLOCK_FLOOR, "board crece al pintar en 0,0")
+	ed.free()

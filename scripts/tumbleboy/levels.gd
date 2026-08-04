@@ -16,12 +16,24 @@ const MAP_TILES := {
 	"D": C.BLOCK_DOUBLEWALL3,
 	"$": C.BLOCK_START,
 	"1": C.BLOCK_GOAL,
+	"2": C.BLOCK_GOAL,
+	"3": C.BLOCK_GOAL,
+	"4": C.BLOCK_GOAL,
+	"5": C.BLOCK_GOAL,
+	"6": C.BLOCK_GOAL,
+	"7": C.BLOCK_GOAL,
+	"8": C.BLOCK_GOAL,
+	"9": C.BLOCK_GOAL,
 	"<": C.BLOCK_RAMP_RIGHT,
 	">": C.BLOCK_RAMP_LEFT,
 	"v": C.BLOCK_RAMP_UP,
 	"^": C.BLOCK_RAMP_DOWN,
 	"@": C.BLOCK_BUMPER,
 }
+
+const BLOCK_SYMBOLS := [
+	" ", "-", "=", "+", "#", "w", "W", "%", "d", "D", "$", "1", "<", ">", "v", "^", "@"
+]
 
 # Devuelve { "attributes": {...}, "map": [ [int, ...], ... ] }
 static func parse_level(level_file: String) -> Dictionary:
@@ -70,3 +82,36 @@ static func _parse_attribute(line: String):
 	var name := line.substr(1, wordend - 1)
 	var data := line.substr(bracketstart + 1, bracketend - bracketstart - 1)
 	return [name, data]
+
+# Escribe un nivel en el formato .txt original.
+# level_map: Array de filas de ints. Las filas se rellenan a la anchura máxima
+# y se escribe un carácter extra al final (el parser descarta el último char).
+static func write_level(level_file: String, attributes: Dictionary, level_map: Array) -> bool:
+	var f := File.new()
+	if f.open(level_file, File.WRITE) != OK:
+		return false
+	var attr_names := ["name", "author", "theme", "boy", "instructions", "background-color", "text-color", "junk"]
+	for name in attr_names:
+		if attributes.has(name):
+			f.store_line("." + name + " {" + str(attributes[name]) + "}")
+	f.store_line("!!!")
+	var width := 0
+	for row in level_map:
+		if row.size() > width:
+			width = row.size()
+	for row in level_map:
+		var line := ""
+		for i in range(width):
+			if i < row.size():
+				line += _symbol_for_block(row[i])
+			else:
+				line += " "
+		f.store_line(line + " ")
+	f.store_line("!!!")
+	f.close()
+	return true
+
+static func _symbol_for_block(blocktype: int) -> String:
+	if blocktype >= 0 and blocktype < BLOCK_SYMBOLS.size():
+		return BLOCK_SYMBOLS[blocktype]
+	return " "

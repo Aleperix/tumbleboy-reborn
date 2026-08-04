@@ -8,6 +8,7 @@ var height := 0
 var blocks: Array = []
 var bumpers: Array = []
 var theme := "default"
+var block_images: Array = []
 
 func clear():
 	width = 0
@@ -18,6 +19,15 @@ func clear():
 
 func set_theme(folder_name: String):
 	theme = folder_name
+
+func set_dimensions(w: int, h: int):
+	width = max(width, w)
+	height = max(height, h)
+	while blocks.size() < height:
+		blocks.append([])
+	for row in blocks:
+		while row.size() < width:
+			row.append(C.BLOCK_NONE)
 
 func get_start_position() -> Vector2:
 	for y in range(height):
@@ -82,3 +92,57 @@ func block_at(x: float, y: float) -> int:
 	if xi >= blocks[yi].size():
 		return C.BLOCK_NONE
 	return blocks[yi][xi]
+
+func load_block_images():
+	block_images = []
+	var names := [
+		"", "floor.png", "floor2.png", "floor3.png",
+		"wall.png", "wall2.png", "wall3.png",
+		"doublewall.png", "doublewall2.png", "doublewall3.png",
+		"startfloor.png", "goal.png",
+		"rampright.png", "rampleft.png", "rampup.png", "rampdown.png",
+		"bumper.png", ""
+	]
+	var size := int(C.PIXEL_SIZE + C.PIXEL_BORDER)
+	for name in names:
+		if name == "":
+			block_images.append(null)
+			continue
+		var path = C.THEMES_DIR + theme + "/" + name
+		if ResourceLoader.exists(path):
+			var tex = load(path)
+			if tex is Texture:
+				if tex.get_size() != Vector2(size, size):
+					var img: Image = tex.get_data()
+					img.resize(size, size, Image.INTERPOLATE_BILINEAR)
+					var it := ImageTexture.new()
+					it.create_from_image(img)
+					block_images.append(it)
+				else:
+					block_images.append(tex)
+			else:
+				block_images.append(null)
+		else:
+			block_images.append(null)
+
+func render_board_image() -> Texture:
+	load_block_images()
+	var iw := int(width * C.PIXEL_SIZE + C.PIXEL_BORDER)
+	var ih := int(height * C.PIXEL_SIZE + C.PIXEL_BORDER)
+	if iw <= 0 or ih <= 0:
+		return null
+	var img: Image = Image.new()
+	img.create(iw, ih, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var blocksize := int(C.PIXEL_SIZE + C.PIXEL_BORDER)
+	for y in range(height):
+		for x in range(width):
+			var t := block_at(x, y)
+			if t >= 0 and t < block_images.size():
+				var tile: Texture = block_images[t]
+				if tile != null:
+					var tile_img: Image = tile.get_data()
+					img.blend_rect(tile_img, Rect2(0, 0, tile_img.get_width(), tile_img.get_height()), Vector2(int(x * C.PIXEL_SIZE), int(y * C.PIXEL_SIZE)))
+	var it := ImageTexture.new()
+	it.create_from_image(img)
+	return it
