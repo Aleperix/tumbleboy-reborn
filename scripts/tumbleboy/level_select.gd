@@ -36,36 +36,32 @@ func _build_ui():
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	add_child(bg)
 
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.alignment = BoxContainer.ALIGN_CENTER
+	vbox.add_constant_override("separation", 8)
+	add_child(vbox)
+
 	var title := Label.new()
 	title.text = "SELECCIONAR NIVEL"
 	title.add_font_override("font", UIFonts.make_font(34, true))
 	title.add_color_override("font_color", Color(0.95, 0.9, 0.6))
 	title.align = Label.ALIGN_CENTER
-	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title.margin_top = 24
-	add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(title)
 
 	var sub := Label.new()
 	sub.text = "Historia nostálgica · packs de la comunidad · tus niveles"
 	sub.add_font_override("font", UIFonts.make_font(16))
-	sub.add_color_override("font_color", Color(0.6, 0.55, 0.7))
+	sub.add_color_override("font_color", Color(0.7, 0.67, 0.8))
 	sub.align = Label.ALIGN_CENTER
-	sub.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	sub.margin_top = 66
-	add_child(sub)
-
-	var scroll := ScrollContainer.new()
-	scroll.set_anchors_preset(Control.PRESET_WIDE)
-	scroll.margin_top = 110
-	scroll.margin_bottom = -10
-	add_child(scroll)
+	sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(sub)
 
 	menu_vbox = VBoxContainer.new()
-	menu_vbox.set_anchors_preset(Control.PRESET_CENTER)
 	menu_vbox.alignment = BoxContainer.ALIGN_CENTER
-	menu_vbox.add_constant_override("separation", 8)
-	menu_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	scroll.add_child(menu_vbox)
+	menu_vbox.add_constant_override("separation", 6)
+	vbox.add_child(menu_vbox)
 
 	var hint := Label.new()
 	hint.text = "D-pad / Flechas: mover · A / Enter: entrar · B / ESC: volver"
@@ -181,7 +177,7 @@ func _build_online_panel():
 	add_child(online_panel)
 
 	var bg := ColorRect.new()
-	bg.color = Color(0.05, 0.04, 0.08, 0.97)
+	bg.color = Color(0.07, 0.05, 0.12)
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	online_panel.add_child(bg)
 
@@ -243,6 +239,7 @@ func _on_open_online():
 	entries = store.get_cached_index()
 	_render_online()
 	online_panel.visible = true
+	online_panel.raise()
 	store.refresh_index()
 
 func _on_close_online():

@@ -23,11 +23,14 @@ func _build_ui():
 	bg.set_anchors_preset(Control.PRESET_WIDE)
 	add_child(bg)
 
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_WIDE)
+	add_child(center)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_CENTER)
 	vbox.alignment = BoxContainer.ALIGN_CENTER
 	vbox.add_constant_override("separation", 10)
-	add_child(vbox)
+	center.add_child(vbox)
 
 	var title := Label.new()
 	title.text = "TUMBLEBOY REBORN"
@@ -47,10 +50,11 @@ func _build_ui():
 	for g in GAMES:
 		var btn := Button.new()
 		btn.text = g["name"]
-		btn.icon = load(g["icon"]) if g["enabled"] else null
 		btn.focus_mode = Control.FOCUS_ALL
 		btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		btn.rect_min_size = Vector2(420, 46)
+		btn.add_font_override("font", UIFonts.make_font(17))
+		btn.add_color_override("font_color", Color(0.95, 0.93, 0.88))
 		btn.disabled = not g["enabled"]
 		if g["enabled"]:
 			btn.connect("pressed", self, "_on_game_pressed", [g])
@@ -59,7 +63,8 @@ func _build_ui():
 
 	var hint := Label.new()
 	hint.text = "D-pad / Flechas: mover · A / Enter: entrar · B / ESC: salir"
-	hint.add_color_override("font_color", Color(0.5, 0.5, 0.6))
+	hint.add_font_override("font", UIFonts.make_font(14))
+	hint.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 	hint.align = Label.ALIGN_CENTER
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(hint)
