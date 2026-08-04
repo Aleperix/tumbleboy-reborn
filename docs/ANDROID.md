@@ -48,6 +48,40 @@ godot3 --headless --path . --export-debug "Android" build/tumbleboy-reborn-debug
 
 O abrir el editor, `Proyecto > Exportar > Android > Exportar proyecto`.
 
+> ⚠️ **Los niveles `.txt` no se empaquetan solos.** Godot solo exporta por
+> defecto los recursos importados; los `.txt` de `assets/tumbleboy/data/levels/`
+> son archivos planos y se quedan fuera si no se añaden a la lista
+> *Filters to export non-resource files/folders*. Sin ese filtro, el juego en
+> Android arranca pero nunca pasa del menú (la lista de niveles queda vacía y
+> `_start_playing()` salta directo a la pantalla de victoria). Cada preset del
+> `export_presets.cfg` lleva `include_filter="*.txt"`.
+
+## Release (APK firmado)
+
+Para el APK de distribución usa el flag **`--export`** (usa el template
+*release* por defecto). El preset `Android ARM64`/`ARM32`/`X86` genera un APK
+por ABI con **Gradle build + firma con el keystore release**:
+
+```
+# release por ABI (requiere SDK/JDK/NDK y keystore configurados en el preset)
+godot3 --headless --path . --export "Android ARM64" build/tumbleboy-reborn-ARM64.apk
+godot3 --headless --path . --export "Android ARM32" build/tumbleboy-reborn-ARM32.apk
+godot3 --headless --path . --export "Android X86"    build/tumbleboy-reborn-X86.apk
+
+# verificar firma
+apksigner verify --print-certs build/tumbleboy-reborn-ARM64.apk
+```
+
+> ⚠️ **`--export-release` NO existe en Godot 3.6.** Los únicos flags de export
+> son `--export` (release), `--export-debug` (debug) y `--export-pack`. Un flag
+> desconocido se ignora en silencio (`main.cpp`): en headless el juego arranca
+> en bucle sin exportar nada y en modo editor simplemente abre el editor. Si el
+> APK no se genera y no ves `export: begin`, revisa que el flag sea el correcto.
+
+Los exports release pueden tardar varios minutos la primera vez (compilan el
+proyecto Gradle); verás `export: begin: Exporting for Android steps: N` al
+arrancar y `export: end` al terminar.
+
 ## Instalar en caja/TV
 
 ```

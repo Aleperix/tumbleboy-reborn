@@ -9,5 +9,6 @@
 *.aab
 *.jks
 *.keystore
+export_presets.cfg
 __pycache__/
 *.pyc
