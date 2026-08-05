@@ -51,6 +51,10 @@
        publicar una release, regenerar el JSON con:
            python3 tools/gen_releases_json.py
        (ver docs/ANDROID.md, checklist de release).
+     * Botones de descarga: su enlace es .../releases/latest/download/...,
+       que GitHub resuelve SIEMPRE a la última release publicada (no depende
+       de ninguna caché). El texto del botón (versión · tamaño) es solo
+       informativo y puede tardar hasta ~12 h en refrescarse tras una release.
      ============================================================ -->
 
 <div class="tbr-post">
@@ -238,6 +242,7 @@
   (function () {
     var REPO = "Aleperix/tumbleboy-reborn";
     var KEY = "tbr_releases";
+    var CACHE_SCHEMA = 2;
     var TTL = 12 * 3600e3;
     var PREFIX = "tbr_";
     var MAX_AGE = 30 * 24 * 3600e3;
@@ -268,14 +273,14 @@
         var raw = localStorage.getItem(KEY);
         if (!raw) return null;
         var rec = JSON.parse(raw);
-        if (!rec || !rec.t || Date.now() - rec.t > TTL) return null;
+        if (!rec || rec.schema !== CACHE_SCHEMA || !rec.t || Date.now() - rec.t > TTL) return null;
         return rec;
       } catch (e) { return null; }
     }
 
     function writeCache(data, etag) {
       try {
-        var rec = { t: Date.now(), data: data, etag: etag || "" };
+        var rec = { t: Date.now(), schema: CACHE_SCHEMA, data: data, etag: etag || "" };
         localStorage.setItem(KEY, JSON.stringify(rec));
       } catch (e) {}
     }
@@ -334,17 +339,13 @@
         var arch = a.getAttribute("data-arch");
         var name = "tumbleboy-reborn-" + arch + ".apk";
         var size = a.querySelector(".tbr-btn-size");
-        var parts = [], href = null;
+        var parts = [];
         if (releases && releases.length) {
           var r = releases[0];
           if (r.tag_name) parts.push(r.tag_name);
           var asset = (r.assets || []).filter(function (x) { return x.name === name; })[0];
-          if (asset) {
-            href = asset.browser_download_url;
-            if (asset.size) parts.push(Math.round(asset.size / 1048576) + " MB");
-          }
+          if (asset && asset.size) parts.push(Math.round(asset.size / 1048576) + " MB");
         }
-        if (href) a.href = href;
         if (size) size.textContent = parts.join(" · ");
       });
     }
