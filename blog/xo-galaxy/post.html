@@ -9,33 +9,11 @@
      polvo verde #a8ff60. Estilo minimalista de afiche retro espacial,
      tipografía monoespaciada, luz neón suave, sin texto."
 
-     ============ INSTRUCCIONES SNIPPET GLOBAL (plantilla) ============
-     Este post lleva su propia limpieza de caché de descargas (script
-     autocontenido al final). Si más adelante quieres que TODOS los posts
-     compartan la misma limpieza, añade este snippet a la plantilla
-     xogalaxy-template.xml justo antes de </body>:
-
-     <script>
-     // Limpieza global de cachés de descargas (tbr_*)
-     (function () {
-       var PREFIX = "tbr_", MAX_AGE = 30 * 24 * 3600e3, MAX_BYTES = 2 * 1024 * 1024;
-       try {
-         var now = Date.now(), total = 0, changed = false;
-         for (var i = 0; i < localStorage.length; i++) {
-           var k = localStorage.key(i);
-           if (!k || k.indexOf(PREFIX) !== 0) continue;
-           var raw = localStorage.getItem(k);
-           total += raw ? raw.length : 0;
-           var rec = null;
-           try { rec = JSON.parse(raw); } catch (e) {}
-           if (rec && rec.t && now - rec.t > MAX_AGE) { localStorage.removeItem(k); changed = true; }
-         }
-         if (!changed && total > MAX_BYTES) { localStorage.clear(); }
-       } catch (e) {}
-     })();
-     </script>
-
-     Nota: la clave de caché usada aquí es "tbr_releases".
+     ============ SNIPPET GLOBAL DE CACHÉ (plantilla) ============
+     La limpieza de cachés de descargas (claves "tbr_*") vive en la
+     plantilla xogalaxy-template.xml (script antes de </body>), así que
+     este post NO lleva su propio prune. La clave de caché del post es
+     "tbr_releases".
 
      ================= CONFIGURACIÓN EN BLOGGER =================
      * Título y etiquetas van en el EDITOR de Blogger, NO en este HTML:
@@ -244,29 +222,10 @@
     var KEY = "tbr_releases";
     var CACHE_SCHEMA = 2;
     var TTL = 12 * 3600e3;
-    var PREFIX = "tbr_";
-    var MAX_AGE = 30 * 24 * 3600e3;
-    var MAX_BYTES = 2 * 1024 * 1024;
 
     var $ = function (id) { return document.getElementById(id); };
     var dot = $("tbrDot"), status = $("tbrStatus"), note = $("tbrChangelogNote"),
         acc = $("tbrChangelog"), refreshBtn = $("tbrRefresh");
-
-    function prune() {
-      try {
-        var now = Date.now(), total = 0, changed = false;
-        for (var i = 0; i < localStorage.length; i++) {
-          var k = localStorage.key(i);
-          if (!k || k.indexOf(PREFIX) !== 0) continue;
-          var raw = localStorage.getItem(k);
-          total += raw ? raw.length : 0;
-          var rec = null;
-          try { rec = JSON.parse(raw); } catch (e) {}
-          if (rec && rec.t && now - rec.t > MAX_AGE) { localStorage.removeItem(k); changed = true; }
-        }
-        if (!changed && total > MAX_BYTES) { localStorage.clear(); }
-      } catch (e) {}
-    }
 
     function readCache() {
       try {
@@ -439,7 +398,6 @@
     }
 
     refreshBtn.addEventListener("click", function () { fetchReleases(true); });
-    prune();
     var c = readCache();
     if (c) render(c.data);
     fetchReleases(false);
