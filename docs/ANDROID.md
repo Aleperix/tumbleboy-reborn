@@ -220,6 +220,19 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
    gh release create v1.1.x --title "v1.1.x — ..." --notes-file <notas.md> \
      build/tumbleboy-reborn-ARM64.apk build/tumbleboy-reborn-ARM32.apk build/tumbleboy-reborn-X86.apk
    ```
+6. **Actualizar el blog** (XO Galaxy): el post lee el changelog de
+   `blog/xo-galaxy/releases.json` vía **jsDelivr** (los lectores no tocan la
+   API de GitHub; si falla, el post cae a la API con ETag). Regenerar y subir:
+   ```
+   python3 tools/gen_releases_json.py
+   git add blog/xo-galaxy/releases.json && git commit -m "blog: releases.json tras v1.1.x" && git push origin main
+   ```
+   jsDelivr refresca el archivo solo en ~12 h (`@main`); para forzarlo:
+   `curl https://purge.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/releases.json`.
+
+> El post también sirve sus imágenes (portada + capturas) desde jsDelivr
+> (`blog/xo-galaxy/*.png` vía `@main`). Fuente versionada del post:
+> `blog/xo-galaxy/post.html`.
 
 ## Instalar en caja/TV
 
