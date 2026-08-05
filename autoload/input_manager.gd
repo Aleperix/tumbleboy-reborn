@@ -38,6 +38,18 @@ func _ready():
 	set_process_input(true)
 	control_mode = SaveData.get_setting("control_mode", ControlMode.TOUCH)
 
+func _notification(what):
+	# En Godot 3 el botón Atrás de Android NO llega como InputEventKey: el sistema
+	# solo emite MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST. Con quit_on_go_back=false
+	# la app no se cierra solo; aquí traducimos esa petición al evento KEY_BACK para
+	# que toda la lógica existente (back_just_pressed) funcione igual en Android.
+	if what == MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST:
+		# En Android el Atrás es un tap sin key-up; action_press marca el frame
+		# incondicionalmente, así cada GO_BACK genera un just_pressed fresco
+		# (sin necesidad de un release intermedio).
+		Input.action_press("back")
+		Input.action_press("ui_cancel")
+
 func _build_input_map():
 	_add_axis("move_up", "move_down", JOY_AXIS_1, JOY_DPAD_UP, JOY_DPAD_DOWN, KEY_W, KEY_UP, KEY_S, KEY_DOWN)
 	_add_axis("move_left", "move_right", JOY_AXIS_0, JOY_DPAD_LEFT, JOY_DPAD_RIGHT, KEY_A, KEY_LEFT, KEY_D, KEY_RIGHT)

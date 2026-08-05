@@ -52,6 +52,7 @@ func _ready():
 	_test_settings()
 	_test_touch_controls()
 	_test_mobile_detection()
+	_test_android_back()
 	yield(_test_list_layout(), "completed")
 	yield(_test_focus_reentry(), "completed")
 	_test_game_icon()
@@ -914,6 +915,14 @@ func _test_mobile_detection():
 	_check(not ed.play_mode, "editor fuera de play_mode")
 	_check(not ed.touch_controls.visible, "touch_controls oculto tras salir de play_mode")
 	ed.free()
+
+func _test_android_back():
+	print("== android back ==")
+	_check(ProjectSettings.get_setting("application/config/quit_on_go_back") == false, "quit_on_go_back desactivado (no cierra la app)")
+	get_tree().notification(MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST)
+	_check(InputManager.back_just_pressed(), "GO_BACK genera back_just_pressed")
+	get_tree().notification(MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST)
+	_check(InputManager.back_just_pressed(), "un segundo GO_BACK también genera back_just_pressed")
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():

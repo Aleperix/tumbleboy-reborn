@@ -177,6 +177,28 @@ Mando/Acelerómetro) aparecen ahora en el teléfono tanto en la partida como en
 el modo prueba del editor (`_sync_touch_controls()` los muestra solo durante
 `play_mode`).
 
+## Botón Atrás de Android
+
+En Godot 3.x el botón Atrás del sistema NO llega como `InputEventKey`: el
+platforma Android solo emite `MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST`, y con
+`application/config/quit_on_go_back` activado (default `true`) la app se cerraba
+siempre sin dar opción a la lógica interna.
+
+Fix (v1.1.2):
+
+1. `application/config/quit_on_go_back=false` en `project.godot`: el Atrás ya no
+   cierra la app por sí solo.
+2. `InputManager._notification()` captura `NOTIFICATION_WM_GO_BACK_REQUEST` y
+   traduce la petición a las acciones `back`/`ui_cancel` con `Input.action_press`.
+   Como en Android el Atrás es un *tap* sin key-up, `action_press` se usa en vez
+   de sintetizar un `InputEventKey`: marca el frame incondicionalmente, así cada
+   GO_BACK genera un `back_just_pressed()` fresco (verificado en el
+   `smoke_test.gd` con dos GO_BACK seguidos).
+
+Con eso, toda la lógica existente (`back_just_pressed()` en menú, hubs, editor,
+packs y partida) funciona igual en Android: el back cierra la app solo en el
+menú principal y navega hacia atrás en submenús/partidas/editor.
+
 ## Controles
 
 | Acción | Teléfono | TV/control |
