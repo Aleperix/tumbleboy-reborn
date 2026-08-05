@@ -51,6 +51,7 @@ func _ready():
 	_test_focus_nav()
 	_test_settings()
 	_test_touch_controls()
+	_test_mobile_detection()
 	yield(_test_list_layout(), "completed")
 	yield(_test_focus_reentry(), "completed")
 	_test_game_icon()
@@ -896,6 +897,23 @@ func _test_touch_controls():
 	tc.free()
 	_restore_save(backup)
 	InputManager.control_mode = SaveData.get_setting("control_mode", InputManager.ControlMode.TOUCH)
+
+func _test_mobile_detection():
+	print("== mobile detection ==")
+	_check(InputManager.is_mobile() == ("--force-touch" in OS.get_cmdline_args()), "is_mobile en desktop solo con --force-touch")
+	var ed = EditorScene.instance()
+	add_child(ed)
+	_check(ed.touch_controls != null, "el editor crea touch_controls")
+	_check(not ed.touch_controls.visible, "touch_controls oculto en edición (desktop)")
+	ed._select_paint(C.BLOCK_START)
+	ed._paint_cell(1, 1, false)
+	ed._enter_play()
+	_check(ed.play_mode, "editor en play_mode")
+	_check(not ed.touch_controls.visible, "touch_controls oculto en play_mode desktop (is_mobile=false)")
+	ed._exit_play()
+	_check(not ed.play_mode, "editor fuera de play_mode")
+	_check(not ed.touch_controls.visible, "touch_controls oculto tras salir de play_mode")
+	ed.free()
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():

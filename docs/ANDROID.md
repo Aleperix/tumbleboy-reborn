@@ -163,6 +163,20 @@ XDG_CONFIG_HOME=~/.config/godot3-env \
 4. **Box Rockchip**: `adb install` + comprobar FPS estables en TumbleBoy
    (es exigente por la física y el tablero grande).
 
+## Detección de móvil
+
+`InputManager.is_mobile()` usa `OS.has_feature("mobile")` (no `"android"`):
+en Godot 3 los feature tags se comparan con sensibilidad a mayúsculas y el tag
+real de Android es `"Android"`, por lo que `"android"` en minúsculas devuelve
+siempre `false` y ocultaba los controles táctiles en teléfono. El tag
+`"mobile"` cubre Android e iOS. En escritorio `--force-touch` fuerza `true`
+para probar los controles.
+
+Consecuencia del fix (v1.1.1): los controles táctiles (joystick + switch
+Mando/Acelerómetro) aparecen ahora en el teléfono tanto en la partida como en
+el modo prueba del editor (`_sync_touch_controls()` los muestra solo durante
+`play_mode`).
+
 ## Controles
 
 | Acción | Teléfono | TV/control |

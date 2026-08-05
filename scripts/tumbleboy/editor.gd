@@ -12,6 +12,7 @@ const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const ZIPWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
+const TouchControlsScene = preload("res://scenes/TouchControls.tscn")
 
 const PALETTE := [
 	["Borrar", C.BLOCK_NONE],
@@ -51,6 +52,7 @@ var attributes := {}
 var selected_block := C.BLOCK_FLOOR
 var play_mode := false
 var play_button: Button
+var touch_controls: Control = null
 var board_texture: Texture = null
 var anim_timer := 0.0
 
@@ -127,7 +129,21 @@ func _ready():
 	else:
 		SaveData.clear_draft()
 		_new_board()
+	_setup_touch_controls()
 	_render()
+
+func _setup_touch_controls():
+	# En móvil, el joystick + switch Mando/Acelerómetro aparecen al probar el
+	# nivel (play_mode) igual que en la partida; ocultos al editar para no
+	# interferir con la pintura táctil.
+	touch_controls = TouchControlsScene.instance()
+	add_child(touch_controls)
+	_sync_touch_controls()
+
+func _sync_touch_controls():
+	if touch_controls != null:
+		touch_controls.visible = InputManager.is_mobile() and play_mode
+		touch_controls.update()
 
 func _build_ui():
 	var top := ColorRect.new()
@@ -956,6 +972,7 @@ func _enter_play():
 		ball.set_position(sp.x, sp.y, 0)
 		play_mode = true
 		_sync_play_button()
+		_sync_touch_controls()
 		_set_status("Vista previa: B para volver a editar")
 	else:
 		_set_status("Pon el bloque 'Inicio' ($) primero")
@@ -964,6 +981,7 @@ func _exit_play():
 	play_mode = false
 	ball = null
 	_sync_play_button()
+	_sync_touch_controls()
 	_set_status("")
 
 func _sync_play_button():

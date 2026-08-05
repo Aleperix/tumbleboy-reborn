@@ -135,8 +135,12 @@ Acelerómetro):
 - `is_tilt_mode() -> bool` — `true` solo si `control_mode == TILT` **y**
   `is_mobile()` (el modo Acelerómetro usa el acelerómetro, sin giroscopio).
 - `recalibrate_tilt()` — fija la calibración actual como punto neutro.
-- `is_mobile() -> bool` — `true` en Android o si la línea de comandos incluye
-  `--force-touch` (pruebas táctiles en escritorio). Sustituye a la antigua `is_touch()`.
+- `is_mobile() -> bool` — `true` en dispositivos móviles (detectados con el
+  feature tag `"mobile"`, que en Godot 3 cubre Android/iOS) o si la línea de
+  comandos incluye `--force-touch` (pruebas táctiles en escritorio). Sustituye
+  a la antigua `is_touch()`. No usar `OS.has_feature("android")`: en Godot 3
+  la comparación de tags es sensible a mayúsculas y el tag real de Android es
+  `"Android"`, por lo que `"android"` devuelve siempre `false`.
 
 Vector de movimiento:
 
@@ -310,6 +314,11 @@ Otros destacados:
 - `_validate_map() -> String` — devuelve `""` si el nivel es válido, si no el motivo.
 - Atributos: `_collect_fields_to_attributes()`, `_attributes_to_fields()`.
 - Modo prueba: `_enter_play()`, `_exit_play()`, `_process_play(delta)`.
+- Controles táctiles en el modo prueba: `_setup_touch_controls()` instancia
+  `TouchControls.tscn` en `_ready` y `_sync_touch_controls()` los muestra solo
+  cuando `InputManager.is_mobile() and play_mode` (el joystick y el switch
+  Mando/Acelerómetro funcionan al probar el nivel en móvil, igual que en la
+  partida; ocultos al editar para no bloquear la pintura táctil).
 - Packs: `_on_create_pack()`, `_refresh_pack_available()`, `_pack_*`,
   `_on_open_export()`, `_on_export_copy(target, id)`.
 - Variables clave: `map`, `attributes`, `board`, `current_file`, `read_only`,

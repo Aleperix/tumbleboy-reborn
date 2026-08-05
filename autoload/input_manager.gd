@@ -127,7 +127,9 @@ func has_joypad() -> bool:
 # --- Móvil: controles táctiles y modo tilt ---
 
 func is_mobile() -> bool:
-	if OS.has_feature("android"):
+	# En Godot 3 el tag correcto de Android/iOS es "mobile" (OS.get_name() devuelve
+	# "Android" con mayúscula; "android" en minúsculas NO existe como feature tag).
+	if OS.has_feature("mobile"):
 		return true
 	return "--force-touch" in OS.get_cmdline_args()
 
