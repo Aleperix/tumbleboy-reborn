@@ -1,0 +1,117 @@
+[
+  {
+    "tag_name": "v1.1.3",
+    "name": "v1.1.3 — Portada del juego en el launcher de Android TV",
+    "published_at": "2026-08-05T18:08:59Z",
+    "body": "## v1.1.3 — Portada del juego en el launcher de Android TV\n\n### Corrección visual\nEn Android TV (y en emuladores como Waydroid) el tile de TumbleBoy Reborn aparecía **sin portada**: el APK no declaraba el `android:banner` (320×180) que el launcher usa como fondo del tile.\n\nAhora el juego muestra la portada como banner en el launcher.\n\n### Detalles técnicos\n- `android/build/AndroidManifest.xml` — `android:banner=\"@mipmap/banner\"` en `<application>` (custom build con gradle).\n- `android/build/res/mipmap/banner.png` — portada recortada a 320×180 (fuente: `Portada-TumbleBoy-Reborn.png`).\n- `assets/android/` — iconos de lanzador (`banner_320x180.png`, `icon_192.png`, `adaptive_fg_432.png`, `adaptive_bg_432.png`).\n- Presets de export (locales): `show_in_android_tv=true` y `launcher_icons` en los 4 presets.\n\n### Verificación\n- APK debug instalado en Waydroid (launcher de Android TV): el tile muestra la portada. ✔\n- APKs firmados con el mismo keystore (SHA-256 `d804…be12`), versionCode 5 / versionName 1.1.3, Leanback intacto.\n\n### APKs\n- `tumbleboy-reborn-ARM64.apk` — teléfonos modernos (Android 8+, la mayoría).\n- `tumbleboy-reborn-ARM32.apk` — teléfonos/cajas antiguos.\n- `tumbleboy-reborn-X86.apk` — emuladores y tablets Intel.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 17301514,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.3/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 16997181,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.3/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 17674909,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.3/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
+    "tag_name": "v1.1.2",
+    "name": "v1.1.2 — El botón Atrás ya no cierra la app en Android",
+    "published_at": "2026-08-05T16:40:20Z",
+    "body": "## v1.1.2 — El botón Atrás ya no cierra la app en Android\n\n### Corrección importante\nEn teléfonos y Android TV, pulsar **Atrás** del sistema cerraba la app desde cualquier pantalla. En Godot 3.x el Atrás de Android no llega como evento de teclado: el sistema solo emite `NOTIFICATION_WM_GO_BACK_REQUEST`, y con el ajuste por defecto (`quit_on_go_back=true`) el juego se cerraba siempre.\n\nAhora el Atrás se comporta como en escritorio:\n- En el **menú principal** cierra la app.\n- En **submenús, hubs, partidas y el editor** navega hacia atrás (vuelve a la pantalla anterior).\n\n### Detalles técnicos\n- `project.godot` — `application/config/quit_on_go_back=false` (el sistema ya no cierra la app).\n- `autoload/input_manager.gd` — `_notification()` traduce `NOTIFICATION_WM_GO_BACK_REQUEST` a las acciones `back`/`ui_cancel` con `Input.action_press`. Como en Android el Atrás es un *tap* sin key-up, `action_press` marca el frame incondicionalmente: cada GO_BACK genera un `back_just_pressed()` fresco (sin un release intermedio).\n- `tests/smoke_test.gd` — regresión `_test_android_back()` con dos GO_BACK seguidos.\n\n### Verificación\n- Smoke test: **ALL PASS** (incluye el nuevo test del back).\n- Pack levels: **ALL PASS (122 checks)**.\n- APKs firmados con el mismo keystore (SHA-256 `d804…be12`), versionCode 4 / versionName 1.1.2, Leanback (Android TV) intacto.\n\n### APKs\n- `tumbleboy-reborn-ARM64.apk` — teléfonos modernos (Android 8+, la mayoría).\n- `tumbleboy-reborn-ARM32.apk` — teléfonos/cajas antiguos.\n- `tumbleboy-reborn-X86.apk` — emuladores y tablets Intel.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 17179069,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.2/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 16874740,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.2/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 17552457,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.2/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
+    "tag_name": "v1.1.1",
+    "name": "v1.1.1 — Fix controles táctiles en teléfono",
+    "published_at": "2026-08-05T09:01:41Z",
+    "body": "## v1.1.1 — Fix controles táctiles en teléfono\n\n### Corrección importante\nEn teléfonos Android (Redmi Note 13 Pro 5G / MIUI y otros) **no aparecían los controles táctiles** (joystick ni el switch Mando ↔ Acelerómetro). La causa: `is_mobile()` usaba `OS.has_feature(\"android\")`, que en Godot 3 **siempre devuelve `false`** — la comparación de feature tags es sensible a mayúsculas y el tag real de Android es `\"Android\"`. Ahora se usa `OS.has_feature(\"mobile\")`, que cubre Android e iOS.\n\n### Novedad\n- El **modo prueba del editor** ahora muestra el joystick + switch Mando/Acelerómetro en móvil (solo durante el play-test; ocultos al editar para no bloquear la pintura táctil). Así se puede probar un nivel recién pintado con los controles táctiles reales.\n\n### Archivos\n- `autoload/input_manager.gd` — `is_mobile()` con el tag `\"mobile\"` (mantiene `--force-touch` para escritorio).\n- `scripts/tumbleboy/editor.gd` — `_setup_touch_controls()` / `_sync_touch_controls()`.\n- `tests/smoke_test.gd` — regresión `_test_mobile_detection()`.\n- `docs/API.md`, `docs/ANDROID.md` — documentación del tag `\"mobile\"` y de los controles en el editor.\n\n### Verificación\n- Smoke test: **ALL PASS** (incluye detección móvil y sync del editor).\n- Pack levels: **ALL PASS (122 checks)**.\n- APKs firmados con el mismo keystore (SHA-256 `d804…be12`), versionCode 3 / versionName 1.1.1, Leanback (Android TV) intacto.\n\n### APKs\n- `tumbleboy-reborn-ARM64.apk` — teléfonos modernos (Android 8+, la mayoría).\n- `tumbleboy-reborn-ARM32.apk` — teléfonos/cajas antiguos.\n- `tumbleboy-reborn-X86.apk` — emuladores y tablets Intel.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 17178241,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.1/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 16873910,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.1/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 17551641,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.1/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
+    "tag_name": "v1.1.0",
+    "name": "TumbleBoy Reborn 1.1",
+    "published_at": "2026-08-05T08:15:33Z",
+    "body": "# TumbleBoy Reborn 1.1\n\nSegunda release. Añade el foco de mando/D-pad **completo en el editor** (todas las filas de widgets), unifica el estilo de las listas de packs y niveles con la columna de 700px centrada de Packs online, y hace que la app aparezca en el **launcher de Android TV**.\n\n## Destacados\n\n- **Foco UI completo en el editor (TV)**: el D-pad recorre todas las filas del editor — toolbar, campos (nombre/autor/tema/niño/descripción) y paleta — además del salto automático celda ↔ botones y el modo foco explícito con **F2 / Y**.\n- **Listas unificadas con estilo Packs online**: *Packs descargados*, *Niveles propios* y *Packs propios* usan la misma columna de 700px centrada y filas con preview, info fija y botones de tamaño consistente.\n- **Launcher de Android TV**: intent-filter `LEANBACK_LAUNCHER` — el juego aparece en la fila de apps del launcher de la TV sin dejar de instalarse y funcionar en teléfonos.\n- **Controles móviles mejorados**: toggle Mando ↔ Acelerómetro centrado; la elección se guarda (save data v2, `control_mode`).\n- **Navegación D-pad** en todos los menús y hubs (scroll-follow, botones deshabilitados saltados) reforzada con helpers compartidos `focus_nav.gd` / `focus_grab.gd`.\n\n## Android\n\n- APK release firmado por ABI: **arm64-v8a**, **armeabi-v7a** y **x86** (minSdk 21, targetSdk 30, package `com.aleperix.tumbleboyreborn`).\n- versionCode **2** / versionName **1.1** (se instala sobre la v1.0).\n- GLES2 + texturas livianas para cajas Rockchip (RK3128 / RK3328) con 1 GB de RAM.\n\n## Tests\n\n- Smoke test y PackLevelsTest (122 checks) en verde.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 17176799,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.0/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 16872460,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.0/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 17550187,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.0/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
+    "tag_name": "v1.0.0",
+    "name": "TumbleBoy Reborn 1.0",
+    "published_at": "2026-08-04T18:31:51Z",
+    "body": "# TumbleBoy Reborn 1.0\n\nPrimer release estable. Port fiel del clásico de puzzle **TumbleBoy** (*marble-platformer* pseudo-3D) a **Godot 3.6** con renderer **GLES2**, pensado para Android (teléfono y TV con D-pad) y cajas genéricas con chips Rockchip (RK3128 / RK3328, Mali-400/450).\n\n## Destacados\n\n- **Modo historia**: los 21 niveles originales de `res://` sin cambios.\n- **Guardado por zócalos de memoria**: 3 zócalos por partida (Nueva partida / Continuar / Sin guardado), también por pack.\n- **Editor de niveles visual**: pintar niveles, añadir créditos (autor/descripción), probarlos, crear packs (ZIP + `manifest.json`) y exportarlos.\n- **Packs comunitarios**: packs descargados con su propio guardado + catálogo *online* con thumbnails (descarga desde GitHub con ETag/304 y caché offline).\n- **Quick play**: jugar historia o niveles sueltos sin guardar nada.\n- **Controles unificados**: teclado + gamepad/D-pad + táctil; el juego se ve y se juega igual en teléfono, TV y cajas.\n\n## Android\n\n- APK release firmado por ABI: **`arm64-v8a`**, **`armeabi-v7a`** y **`x86`** (minSdk 21, targetSdk 30, package `com.aleperix.tumbleboyreborn`).\n- **Fix de arranque**: los niveles `.txt` ahora se empaquetan en el APK (`include_filter=\"*.txt\"`). Sin este filtro el juego en Android no pasaba del menú (la lista de niveles quedaba vacía y `_start_playing()` saltaba directo a la victoria).\n- GLES2 + texturas livianas para correr en cajas con 1 GB de RAM.\n\n## Assets y packs\n\n- Port fiel de los assets originales (sprites, temas, sonidos; melodías `.mid`/`.mod` convertidas a OGG).\n- Packs oficiales **Números** y **Letras** incluidos en `packs/`.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 17148281,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.0.0/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 16843943,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.0.0/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 17521666,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.0.0/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  }
+]
