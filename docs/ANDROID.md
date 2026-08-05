@@ -82,6 +82,13 @@ Los exports release pueden tardar varios minutos la primera vez (compilan el
 proyecto Gradle); verás `export: begin: Exporting for Android steps: N` al
 arrancar y `export: end` al terminar.
 
+> El proceso puede terminar con `free(): invalid pointer`, líneas de
+> `nvidia-drm`/`dri3` o `glx: failed to create dri3 screen`: son ruido del
+> teardown de OpenGL de este equipo (sin contexto GLES3), inofensivos. Si el
+> APK se generó en `build/` y `apksigner verify` pasa, el export fue correcto.
+> `--headless` también funciona; sin él, el export usa el renderer GLES2 del
+> proyecto y sale igual.
+
 ## Launcher de Android TV
 
 Para que el juego aparezca en la fila de apps del launcher de Android TV la
@@ -128,6 +135,91 @@ Con ambos filtros la app sigue funcionando como una app normal en teléfonos
 > desde el menú del editor se sobrescribe con el template de serie; hay que
 > volver a aplicar el cambio. La activity ya lleva `android:exported="true"`
 > (requisito para los launchers en Android 12+).
+
+### Portada del tile en el launcher (banner 320×180)
+
+El launcher de Android TV usa el **`android:banner`** de la app (320×180)
+como portada del tile en la fila de apps. Sin él, el tile sale sin imagen
+(le pasaba a v1.1.2 y anteriores).
+
+Fix (v1.1.3) — en el manifest del custom build
+(`android/build/AndroidManifest.xml`), el atributo **antes** de `android:icon`
+(lo que vaya después de `android:icon` el exportador lo borra; antes, se
+preserva):
+
+```xml
+<application ... android:banner="@mipmap/banner" android:icon="@mipmap/icon">
+```
+
+Recurso `android/build/res/mipmap/banner.png` (320×180), recortado de
+`Portada-TumbleBoy-Reborn.png` (1200×896 → crop 1200×675 → 320×180). La fuente
+generada vive en `assets/android/banner_320x180.png`; para regenerarla:
+
+```
+cp assets/android/banner_320x180.png android/build/res/mipmap/banner.png
+```
+
+Verificar que entró en el APK:
+
+```
+aapt dump badging build/tumbleboy-reborn-debug.apk | grep banner
+# application: label='TumbleBoy Reborn' ... banner='res/mipmap/banner.png'
+```
+
+> El launcher de teléfono ignora el banner; el de TV lo muestra como fondo del
+> tile. También conviene tener `launcher_icons/*` en los presets
+> (`assets/android/icon_192.png`, `adaptive_fg/bg_432.png`) para que el icono
+> no salga genérico.
+
+## Verificar en Waydroid (launcher de Android TV)
+
+Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
+
+1. `waydroid status` → `RUNNING`; IP del contenedor (p.ej. `192.168.240.112`).
+2. `adb connect 192.168.240.112:5555` (o adb portable en `/tmp/opencode/platform-tools/`).
+3. `waydroid app install` **falla** en este equipo (el directorio tmp
+   `~/.local/share/waydroid/data/waydroid_tmp` es root y el usuario no puede
+   escribir). Usar adb directamente:
+   ```
+   adb -s 192.168.240.112:5555 install build/tumbleboy-reborn-debug.apk
+   ```
+4. El APK debug se firma con el **debug keystore** (`~/.android/debug.keystore`),
+   distinto del release: si el contenedor ya tenía la release instalada hay que
+   **desinstalar primero** o `adb install -r` falla con
+   `INSTALL_FAILED_UPDATE_INCOMPATIBLE ... signatures do not match`:
+   ```
+   adb -s 192.168.240.112:5555 uninstall com.aleperix.tumbleboyreborn
+   ```
+5. Refrescar el launcher para que relea la app:
+   ```
+   adb -s 192.168.240.112:5555 shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
+   ```
+6. Comprobar visualmente el tile en la fila de apps (el modelo/IA no ve
+   imágenes: confirmar con el usuario).
+
+## Release — checklist completa
+
+1. **Bump de versión** en `export_presets.cfg` (los 4 presets, gitignoreado):
+   `version/code` (+1) y `version/name` a la nueva.
+2. **Debug en Waydroid** (verificación):
+   ```
+   godot3 --path . --export-debug "Android" build/tumbleboy-reborn-debug.apk
+   ```
+3. **3 APKs de release** (Gradle build + firma con keystore release):
+   ```
+   godot3 --path . --export "Android ARM64" build/tumbleboy-reborn-ARM64.apk
+   godot3 --path . --export "Android ARM32" build/tumbleboy-reborn-ARM32.apk
+   godot3 --path . --export "Android X86"    build/tumbleboy-reborn-X86.apk
+   ```
+4. **Verificar**: `aapt dump badging` (versionCode/versionName/banner) y
+   `apksigner verify --print-certs` → SHA-256 `d804317b…b35be12`.
+5. **Publicar**:
+   ```
+   git add <cambios> && git commit -m "v1.1.x: ..." && git push origin main
+   git tag v1.1.x && git push origin v1.1.x
+   gh release create v1.1.x --title "v1.1.x — ..." --notes-file <notas.md> \
+     build/tumbleboy-reborn-ARM64.apk build/tumbleboy-reborn-ARM32.apk build/tumbleboy-reborn-X86.apk
+   ```
 
 ## Instalar en caja/TV
 
