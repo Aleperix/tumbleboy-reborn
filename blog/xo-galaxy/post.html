@@ -305,7 +305,7 @@
           var asset = (r.assets || []).filter(function (x) { return x.name === name; })[0];
           if (asset && asset.size) parts.push(Math.round(asset.size / 1048576) + " MB");
         }
-        if (size) size.textContent = parts.join(" · ");
+        if (size) size.textContent = parts.join("\u00b7");
       });
     }
 
@@ -314,11 +314,11 @@
       if (latest && latest.tag_name) {
         dot.className = "tbr-dot on";
         status.textContent = "Publicado en GitHub: " + latest.tag_name +
-          (releases.length > 1 ? " · " + releases.length + " versiones" : "") +
-          (rate ? " · " + rate + " consultas restantes" : "");
+          (releases.length > 1 ? "\u00b7 " + releases.length + " versiones" : "") +
+          (rate ? "\u00b7 " + rate + " consultas restantes" : "");
       } else {
         dot.className = "tbr-dot off";
-        status.textContent = "Sin conexión: los botones llevan a la versión publicada en GitHub.";
+        status.textContent = "Sin conexi\u00f3n: los botones llevan a la versi\u00f3n publicada en GitHub.";
       }
     }
 
