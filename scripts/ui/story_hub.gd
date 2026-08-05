@@ -2,6 +2,7 @@ extends Control
 # StoryHub — Modo historia: Nueva Partida / Continuar / Volver.
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
+const FocusNav = preload("res://scripts/ui/focus_nav.gd")
 
 var buttons: Array = []
 
@@ -69,7 +70,7 @@ func _build_ui():
 	col.add_child(spacer2)
 
 	var back := Button.new()
-	back.text = "Volver  (B)"
+	back.text = "Volver"
 	back.focus_mode = Control.FOCUS_ALL
 	back.rect_min_size = Vector2(400, 50)
 	back.add_font_override("font", UIFonts.make_font(16))
@@ -99,7 +100,7 @@ func _update_continue():
 	var key := SaveData.get_game_key("story", "historia")
 	var has := SaveData.has_any_save(key)
 	if buttons.size() > 1:
-		buttons[1].disabled = not has
+		FocusNav.set_skippable(buttons[1], not has)
 		if has:
 			var s := SaveData.get_slot_info(key, _first_save_slot(key))
 			if not s.empty():
@@ -125,6 +126,8 @@ func _on_back():
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
 
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
+			if FocusNav.popup_open(self):
+				return
 			_on_back()

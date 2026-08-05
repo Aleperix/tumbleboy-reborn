@@ -5,6 +5,8 @@ const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const LevelsScript = preload("res://scripts/tumbleboy/levels.gd")
 const PackRow = preload("res://scripts/ui/pack_row.gd")
+const FocusNav = preload("res://scripts/ui/focus_nav.gd")
+const FocusGrab = preload("res://scripts/ui/focus_grab.gd")
 const USER_LEVELS_DIR := "user://tumbleboy_levels/"
 
 var hub_panel: Control
@@ -18,8 +20,11 @@ var hub_buttons: Array = []
 var niveles_back: Button
 var packs_create: Button
 var packs_back: Button
+var niveles_col: VBoxContainer
+var packs_col: VBoxContainer
 var delete_dialog: ConfirmationDialog
 var pending_delete: String = ""
+var _panel_grabber: Reference = null
 
 func _ready():
 	_build_ui()
@@ -103,7 +108,7 @@ func _build_hub():
 	col.add_child(spacer2)
 
 	var back := Button.new()
-	back.text = "Volver  (B)"
+	back.text = "Volver"
 	back.focus_mode = Control.FOCUS_ALL
 	back.rect_min_size = Vector2(400, 44)
 	back.add_font_override("font", UIFonts.make_font(16))
@@ -145,10 +150,11 @@ func _build_niveles():
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
-	col.rect_min_size = Vector2(500, 0)
+	col.rect_min_size = Vector2(700, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
+	niveles_col = col
 
 	var title := Label.new()
 	title.text = "NIVELES PROPIOS"
@@ -165,21 +171,25 @@ func _build_niveles():
 
 	niveles_vbox = VBoxContainer.new()
 	niveles_vbox.alignment = BoxContainer.ALIGN_CENTER
-	niveles_vbox.add_constant_override("separation", 4)
+	niveles_vbox.add_constant_override("separation", 10)
 	niveles_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	niveles_scroll.add_child(niveles_vbox)
 
 	var spacer := Control.new()
-	spacer.rect_min_size = Vector2(0, 8)
+	spacer.rect_min_size = Vector2(0, 6)
 	col.add_child(spacer)
 
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGN_CENTER
+	row.add_constant_override("separation", 16)
+	col.add_child(row)
+
 	var back := Button.new()
-	back.text = "Volver  (B)"
-	back.focus_mode = Control.FOCUS_ALL
-	back.rect_min_size = Vector2(300, 44)
-	back.add_font_override("font", UIFonts.make_font(16))
+	back.text = "Volver"
+	back.rect_min_size = Vector2(160, 36)
+	back.add_font_override("font", UIFonts.make_font(15))
 	back.connect("pressed", self, "_on_close_niveles")
-	col.add_child(back)
+	row.add_child(back)
 	niveles_back = back
 
 	niveles_panel.visible = false
@@ -221,7 +231,7 @@ func _refresh_niveles():
 		l.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 		l.align = Label.ALIGN_CENTER
 		niveles_vbox.add_child(l)
-		_wire_scroll_follow(niveles_scroll, niveles_vbox)
+		FocusNav.enable_scroll_follow(niveles_scroll)
 		return
 	for path in files:
 		var info = LevelsScript.parse_level(path)
@@ -229,50 +239,46 @@ func _refresh_niveles():
 		var display_name: String = info["attributes"].get("name", fname.get_basename())
 		var author: String = info["attributes"].get("author", "")
 		var instructions: String = info["attributes"].get("instructions", "")
-		var row := VBoxContainer.new()
-		row.add_constant_override("separation", 2)
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGN_CENTER
+		row.add_constant_override("separation", 12)
+		var info_box := VBoxContainer.new()
+		info_box.rect_min_size = Vector2(400, 0)
+		info_box.add_constant_override("separation", 2)
 		var name_label := Label.new()
-		name_label.text = display_name
+		name_label.text = display_name + ("  —  " + author if author != "" else "")
 		name_label.add_font_override("font", UIFonts.make_font(16, true))
-		name_label.add_color_override("font_color", Color(0.95, 0.9, 0.6))
-		row.add_child(name_label)
-		if author != "":
-			var author_label := Label.new()
-			author_label.text = author
-			author_label.add_font_override("font", UIFonts.make_font(12))
-			author_label.add_color_override("font_color", Color(0.6, 0.6, 0.7))
-			row.add_child(author_label)
+		name_label.add_color_override("font_color", Color(0.95, 0.95, 0.98))
+		info_box.add_child(name_label)
 		if instructions != "":
 			var instr_label := Label.new()
 			instr_label.text = instructions
 			instr_label.autowrap = true
-			instr_label.rect_min_size = Vector2(480, 0)
-			instr_label.add_font_override("font", UIFonts.make_font(12))
-			instr_label.add_color_override("font_color", Color(0.5, 0.5, 0.6))
-			row.add_child(instr_label)
-		var btn_hb := HBoxContainer.new()
-		btn_hb.add_constant_override("separation", 6)
+			instr_label.rect_min_size = Vector2(400, 0)
+			instr_label.add_font_override("font", UIFonts.make_font(13))
+			instr_label.add_color_override("font_color", Color(0.7, 0.7, 0.8))
+			info_box.add_child(instr_label)
+		row.add_child(info_box)
 		var play_btn := Button.new()
 		play_btn.text = "Jugar"
-		play_btn.rect_min_size = Vector2(80, 32)
+		play_btn.rect_min_size = Vector2(84, 36)
 		play_btn.add_font_override("font", UIFonts.make_font(14))
 		play_btn.connect("pressed", self, "_on_play_level", [path, display_name])
-		btn_hb.add_child(play_btn)
+		row.add_child(play_btn)
 		var edit_btn := Button.new()
 		edit_btn.text = "Editar"
-		edit_btn.rect_min_size = Vector2(80, 32)
+		edit_btn.rect_min_size = Vector2(84, 36)
 		edit_btn.add_font_override("font", UIFonts.make_font(14))
 		edit_btn.connect("pressed", self, "_on_edit_level", [path])
-		btn_hb.add_child(edit_btn)
+		row.add_child(edit_btn)
 		var del_btn := Button.new()
 		del_btn.text = "Eliminar"
-		del_btn.rect_min_size = Vector2(80, 32)
+		del_btn.rect_min_size = Vector2(84, 36)
 		del_btn.add_font_override("font", UIFonts.make_font(14))
 		del_btn.connect("pressed", self, "_on_delete_level", [path, display_name])
-		btn_hb.add_child(del_btn)
-		row.add_child(btn_hb)
+		row.add_child(del_btn)
 		niveles_vbox.add_child(row)
-	_wire_scroll_follow(niveles_scroll, niveles_vbox)
+	FocusNav.enable_scroll_follow(niveles_scroll)
 
 func _list_user_levels() -> Array:
 	var result := []
@@ -316,6 +322,7 @@ func _on_delete_level(path: String, display: String):
 		delete_dialog.get_ok().text = "Eliminar"
 		delete_dialog.get_cancel().text = "Cancelar"
 		delete_dialog.connect("confirmed", self, "_on_delete_level_confirmed")
+		delete_dialog.connect("popup_hide", self, "_on_dialog_closed")
 		add_child(delete_dialog)
 	delete_dialog.dialog_text = "¿Eliminar el nivel '" + display + "'?\nEsta acción no se puede deshacer."
 	delete_dialog.popup_centered()
@@ -348,10 +355,11 @@ func _build_packs():
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
-	col.rect_min_size = Vector2(500, 0)
+	col.rect_min_size = Vector2(700, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
+	packs_col = col
 
 	var title := Label.new()
 	title.text = "PACKS PROPIOS"
@@ -368,7 +376,7 @@ func _build_packs():
 
 	packs_vbox = VBoxContainer.new()
 	packs_vbox.alignment = BoxContainer.ALIGN_CENTER
-	packs_vbox.add_constant_override("separation", 6)
+	packs_vbox.add_constant_override("separation", 10)
 	packs_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	packs_scroll.add_child(packs_vbox)
 
@@ -376,26 +384,25 @@ func _build_packs():
 	spacer.rect_min_size = Vector2(0, 6)
 	col.add_child(spacer)
 
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGN_CENTER
+	row.add_constant_override("separation", 16)
+	col.add_child(row)
+
 	var create_btn := Button.new()
 	create_btn.text = "Crear nuevo pack"
-	create_btn.focus_mode = Control.FOCUS_ALL
-	create_btn.rect_min_size = Vector2(300, 44)
-	create_btn.add_font_override("font", UIFonts.make_font(16))
+	create_btn.rect_min_size = Vector2(160, 36)
+	create_btn.add_font_override("font", UIFonts.make_font(15))
 	create_btn.connect("pressed", self, "_on_create_pack")
-	col.add_child(create_btn)
+	row.add_child(create_btn)
 	packs_create = create_btn
 
-	var spacer2 := Control.new()
-	spacer2.rect_min_size = Vector2(0, 8)
-	col.add_child(spacer2)
-
 	var back := Button.new()
-	back.text = "Volver  (B)"
-	back.focus_mode = Control.FOCUS_ALL
-	back.rect_min_size = Vector2(300, 44)
-	back.add_font_override("font", UIFonts.make_font(16))
+	back.text = "Volver"
+	back.rect_min_size = Vector2(160, 36)
+	back.add_font_override("font", UIFonts.make_font(15))
 	back.connect("pressed", self, "_on_close_packs")
-	col.add_child(back)
+	row.add_child(back)
 	packs_back = back
 
 	packs_panel.visible = false
@@ -416,24 +423,22 @@ func _refresh_packs():
 		l.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 		l.align = Label.ALIGN_CENTER
 		packs_vbox.add_child(l)
-		_wire_scroll_follow(packs_scroll, packs_vbox)
+		FocusNav.enable_scroll_follow(packs_scroll)
 		return
 	for p in local:
 		var id: String = str(p.get("id", ""))
 		var thumb = PackReader.get_thumbnail_texture(PackReader.PACKS_DIR + id + ".zip")
 		var play_btn := Button.new()
 		play_btn.text = "Jugar"
-		play_btn.rect_min_size = Vector2(100, 36)
-		play_btn.add_font_override("font", UIFonts.make_font(14))
+		play_btn.rect_min_size = Vector2(120, 36)
 		play_btn.connect("pressed", self, "_on_play_pack", [p])
 		var del_btn := Button.new()
 		del_btn.text = "Eliminar"
-		del_btn.rect_min_size = Vector2(100, 36)
-		del_btn.add_font_override("font", UIFonts.make_font(14))
+		del_btn.rect_min_size = Vector2(120, 36)
 		del_btn.connect("pressed", self, "_on_delete_pack", [id])
 		var row = PackRow.make(p, thumb, [play_btn, del_btn])
 		packs_vbox.add_child(row)
-	_wire_scroll_follow(packs_scroll, packs_vbox)
+	FocusNav.enable_scroll_follow(packs_scroll)
 
 func _on_play_pack(p: Dictionary):
 	var id: String = str(p.get("id", ""))
@@ -448,6 +453,7 @@ func _on_delete_pack(id: String):
 		delete_dialog.get_ok().text = "Eliminar"
 		delete_dialog.get_cancel().text = "Cancelar"
 		delete_dialog.connect("confirmed", self, "_on_delete_pack_confirmed")
+		delete_dialog.connect("popup_hide", self, "_on_dialog_closed")
 		add_child(delete_dialog)
 	delete_dialog.dialog_text = "¿Eliminar el pack '" + id + "'?\nSe eliminará el archivo ZIP y todos sus niveles."
 	delete_dialog.popup_centered()
@@ -465,29 +471,17 @@ func _on_create_pack():
 
 # --- Navegación ---
 
-func _grab_first_button(root: Node) -> bool:
-	if root is Button and not root.disabled:
-		root.grab_focus()
-		return true
-	for ch in root.get_children():
-		if _grab_first_button(ch):
-			return true
-	return false
-
-func _wire_scroll_follow(scroll: ScrollContainer, root: Node):
-	for ch in root.get_children():
-		if ch is Button and not ch.is_connected("focus_entered", scroll, "ensure_control_visible"):
-			ch.connect("focus_entered", scroll, "ensure_control_visible", [ch])
-		if ch.get_child_count() > 0:
-			_wire_scroll_follow(scroll, ch)
+func _panel_grabber() -> Reference:
+	if _panel_grabber == null:
+		_panel_grabber = FocusGrab.new()
+	return _panel_grabber
 
 func _on_open_niveles():
 	hub_panel.visible = false
 	_refresh_niveles()
 	niveles_panel.visible = true
 	niveles_panel.raise()
-	if not _grab_first_button(niveles_vbox):
-		niveles_back.grab_focus()
+	_panel_grabber().start(get_tree(), niveles_vbox, niveles_back)
 
 func _on_close_niveles():
 	niveles_panel.visible = false
@@ -500,8 +494,7 @@ func _on_open_packs():
 	_refresh_packs()
 	packs_panel.visible = true
 	packs_panel.raise()
-	if not _grab_first_button(packs_vbox):
-		packs_create.grab_focus()
+	_panel_grabber().start(get_tree(), packs_vbox, packs_create)
 
 func _on_close_packs():
 	packs_panel.visible = false
@@ -515,9 +508,17 @@ func _on_new_level():
 func _on_back():
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
 
+func _on_dialog_closed():
+	if niveles_panel.visible:
+		_panel_grabber().start(get_tree(), niveles_vbox, niveles_back)
+	elif packs_panel.visible:
+		_panel_grabber().start(get_tree(), packs_vbox, packs_back)
+
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
+			if FocusNav.popup_open(self):
+				return
 			if niveles_panel.visible:
 				_on_close_niveles()
 			elif packs_panel.visible:

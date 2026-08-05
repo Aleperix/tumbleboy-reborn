@@ -4,12 +4,14 @@ extends Node
 
 const SAVE_PATH := "user://save_slots.json"
 const SLOT_COUNT := 3
+const SAVE_VERSION := 2
 
 var games: Dictionary = {}
 var active_slot: int = -1
 var active_key: String = ""
 var downloaded_packs: Array = []
 var draft: Dictionary = {}
+var settings: Dictionary = {}
 
 func _init():
 	_load()
@@ -28,13 +30,26 @@ func _load():
 					draft = parsed["draft"]
 					if not draft is Dictionary:
 						draft = {}
+				if parsed.has("settings"):
+					settings = parsed["settings"]
+					if not settings is Dictionary:
+						settings = {}
 			file.close()
 
 func _save():
 	var file := File.new()
 	if file.open(SAVE_PATH, File.WRITE) == OK:
-		file.store_string(JSON.print({ "version": 1, "games": games, "downloaded_packs": downloaded_packs, "draft": draft }))
+		file.store_string(JSON.print({ "version": SAVE_VERSION, "games": games, "downloaded_packs": downloaded_packs, "draft": draft, "settings": settings }))
 		file.close()
+
+# --- Ajustes ---
+
+func get_setting(key: String, default = null):
+	return settings.get(key, default)
+
+func set_setting(key: String, value):
+	settings[key] = value
+	_save()
 
 # --- Zócalos ---
 
@@ -169,6 +184,7 @@ func reset_all():
 	games = {}
 	downloaded_packs = []
 	draft = {}
+	settings = {}
 	active_slot = -1
 	active_key = ""
 	_save()

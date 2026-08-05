@@ -60,10 +60,15 @@ cada pack (`key = "pack:<id>"`). Los niveles sueltos no usan guardado.
 
 Constantes y estado:
 
-- `const SAVE_PATH := "user://save_slots.json"`, `const SLOT_COUNT := 3`
+- `const SAVE_PATH := "user://save_slots.json"`, `const SLOT_COUNT := 3`,
+  `const SAVE_VERSION := 2`
 - `games: Dictionary` (clave → array de 3, cada elemento `null` o un diccionario)
 - `active_slot: int = -1`, `active_key: String = ""` — sesión activa
 - `downloaded_packs: Array` — ids marcados como descargados de la tienda
+- `settings: Dictionary` — preferencias del usuario persistidas (p. ej. modo de
+  control móvil)
+- `get_setting(key, default) -> value` / `set_setting(key, value)` — lee/escribe
+  una preferencia; se persiste en el mismo JSON.
 
 Zócalos:
 
@@ -101,13 +106,14 @@ Formato de `save_slots.json`:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "games": {
     "story":   [ null, {"mode":"story","id":"historia","completed":3,"total":21,"updated":1712345678}, null ],
     "pack:abc":[ null, null, null ]
   },
   "downloaded_packs": ["abc"],
-  "draft": { "map": [[1,2]], "attributes": {"theme":"default"}, "current_file": "", "read_only": false, "updated": 123 }
+  "draft": { "map": [[1,2]], "attributes": {"theme":"default"}, "current_file": "", "read_only": false, "updated": 123 },
+  "settings": { "control_mode": 0 }
 }
 ```
 
@@ -116,15 +122,41 @@ Formato de `save_slots.json`:
 Capa de entrada unificada. Construye el `InputMap` en tiempo de ejecución para
 que teclado, gamepad y D-pad se comporten igual.
 
-Acciones: `move_up/down/left/right`, `confirm`, `back`, y las `ui_*` para el foco.
+Acciones: `move_up/down/left/right`, `confirm`, `back`, `ui_toggle`
+(tecla `F2` / botón `Y` del mando), y las `ui_*` para el foco
+(`ui_up/down/left/right`, `ui_accept`, `ui_cancel`).
 
-- `get_move_vector() -> Vector2` — vector de movimiento normalizado (tiene en
-  cuenta `virtual_move` del joystick táctil).
-- `confirm_just_pressed() -> bool`, `back_just_pressed() -> bool`.
+Modo de control móvil (`enum ControlMode { TOUCH, TILT }`, donde `TILT` = modo
+Acelerómetro):
+
+- `control_mode: int` — modo activo, cargado desde `SaveData.get_setting("control_mode", TOUCH)`.
+- `set_control_mode(mode)` — cambia el modo, lo persiste en `SaveData` y emite
+  `control_mode_changed(mode)`.
+- `is_tilt_mode() -> bool` — `true` solo si `control_mode == TILT` **y**
+  `is_mobile()` (el modo Acelerómetro usa el acelerómetro, sin giroscopio).
+- `recalibrate_tilt()` — fija la calibración actual como punto neutro.
+- `is_mobile() -> bool` — `true` en Android o si la línea de comandos incluye
+  `--force-touch` (pruebas táctiles en escritorio). Sustituye a la antigua `is_touch()`.
+
+Vector de movimiento:
+
+- `get_move_vector() -> Vector2` — vector normalizado para el juego: si está en
+  modo Acelerómetro y el acelerómetro supera la deadzone (0.7, clamp 6.0,
+  suavizado lerp 0.3) devuelve ese vector; si no, hardware; y `virtual_move`
+  (joystick táctil) tiene prioridad sobre el hardware.
+- `get_hardware_move_vector() -> Vector2` — solo teclado/D-pad del mando (lo usa
+  el editor para mover el cursor sin interferir con el joystick táctil).
+- `virtual_move: Vector2` — lo escribe `touch_controls.gd`.
+
+Helpers:
+
+- `confirm_just_pressed() -> bool`, `back_just_pressed() -> bool`,
+  `ui_toggle_just_pressed() -> bool`.
 - `press_action(action)`, `release_action(action)`, `tap_action(action)`.
-- `has_joypad() -> bool`, `is_touch() -> bool`.
-- Señales: `confirm_pressed`, `back_pressed`.
-- Constantes de joypad: `JOY_BUTTON_A=0`, `JOY_BUTTON_B=1`, `JOY_BUTTON_START=9`,
+- `has_joypad() -> bool`.
+- Señales: `confirm_pressed`, `back_pressed`, `control_mode_changed(mode)`.
+- Constantes de joypad: `JOY_BUTTON_A=0`, `JOY_BUTTON_B=1`,
+  `JOY_BUTTON_X=2`, `JOY_BUTTON_Y=3`, `JOY_BUTTON_START=9`,
   `JOY_BUTTON_BACK=10`, `JOY_DPAD_*`.
 
 ### LevelQueue
@@ -220,9 +252,12 @@ Estados: `State.PLAYING`, `State.WIN_LEVEL`, `State.WIN_GAME`.
   `SaveData.end_session()`.
 - `_unhandled_input(ev)` — movimiento (vía `InputManager.get_move_vector()`) y
   B/ESC para salir (`_go_to_menu`).
+- En estado `MENU`, un toque de pantalla (`InputEventScreenTouch`) arranca la
+  partida (móvil).
 - Dibujo: `_draw()`, `_draw_game()`, `_draw_menu()`, `_draw_win()`,
   `_draw_hint()` (pinta el hint "B / ESC: menú" con fondo oscuro para legibilidad).
 - Cámara: `_get_screen_offset()` sigue a la bola con márgenes.
+- Controles táctiles: instancia `TouchControls.tscn` si `InputManager.is_mobile()`.
 
 ### editor.gd
 
@@ -242,6 +277,30 @@ Otros destacados:
 - `_validate_map()` — exige bloques Inicio ($) y Meta (1).
 - `_paint_cell(col, row, erase)`, `_select_paint(block)`, `_undo()`, `_redo()`,
   `_validate_map()`, `_validate_fields()`.
+- Modo foco UI (navegar los widgets con D-pad en TV): `ui_mode: bool`,
+  `ui_controls: Array`, `_toggle_ui_mode()` (tecla `F2` / botón `Y`),
+  `_set_ui_focus_mode(mode)`. Al activarse, toolbar y paleta pasan a
+  `FOCUS_ALL` y `play_button` toma el foco; al salir, se suelta el foco y
+  vuelven a `FOCUS_NONE`. En modo foco, `B` vuelve al plano (no sale del
+  editor). El cursor de pintado siempre usa `get_hardware_move_vector()` para
+  no mezclarse con el joystick táctil.
+- **Navegación vertical completa (4 filas)**: `_wire_focus_rows()` enlaza los
+  vecinos left/right dentro de cada fila y top/bottom entre filas adyacentes.
+  Filas: (1) `toolbar_controls` (Nuevo/Abrir/Guardar/…), (2) campos con `rect_position.y ≤ 50`
+  (nombre, autor), (3) campos con `y > 50` (tema, niño, descripción) y (4) la
+  paleta. Los vecinos verticales se emparejan por la x más cercana
+  (`_nearest_focus`), así el D-pad baja "en vertical" de toolbar → fila 2 →
+  fila 3 → paleta y sube en orden inverso. `ui_fields` agrupa los 5 campos
+  editables (name_edit, author_edit, theme_option, boy_option, desc_edit);
+  toolbar y campos quedan fuera de `ui_controls`, de modo que en modo pintura
+  siguen siendo clicables con el ratón sin alterar `_set_ui_focus_mode`.
+- Transición automática celda ↔ botones: `_try_ui_edge(step, prev)` se llama
+  desde `_move_cursor` con la celda anterior, y al llegar al tope del grid
+  (arriba) entra en modo foco UI sobre la toolbar (`ui_controls[0]`), y en el
+  borde inferior sobre la paleta (el bloque seleccionado). A la inversa, en
+  modo foco UI una pulsación vertical que no mueve el foco (`_focus_owner() ==
+  _ui_last_focus`, navegación bloqueada) sale al tablero dejando el cursor donde
+  estaba. `_enter_ui_focus(target)` / `_exit_ui_focus()` centralizan la lógica.
 - Al abrir un nivel (`_on_open_selected`) se cargan automáticamente nombre,
   autor, descripción, tema y niño (`_attributes_to_fields` + `_theme_sync`).
 - Borrador: se marca sucio solo al modificar (pintar, deshacer, rehacer, tema,
@@ -289,10 +348,15 @@ build de Godot). Formato ZIP clásico, sin compresión (store).
 
 ### pack_row.gd
 
-Builder compartido de filas de packs (HBoxContainer con preview + info + botones).
-Usado por `packs_community.gd` (descargados) y `editor_hub.gd` (propios).
+Builder compartido de filas de packs (estilo de Packs online). Usado por
+`packs_community.gd` (descargados) y `editor_hub.gd` (propios).
 
 - `PackRow.make(pack: Dictionary, thumb: Texture, buttons: Array) -> HBoxContainer`
+  — bloque centrado (`ALIGN_CENTER`, sep 12): preview 64×64 + columna de info
+  **fija de 400px no expandible** (`"nombre — autor"` en una sola línea, 16 bold;
+  descripción opcional como segunda línea con autowrap 13 y color gris) +
+  botones de 120×36 con fuente 14. El bloque de info fijo hace que las filas no
+  se anclen a la izquierda aunque el contenido sea corto.
 
 ### pack_store.gd
 
@@ -330,6 +394,22 @@ hint al pie con `StyleBoxFlat` de fondo `Color(0,0,0,0.35)`. El patrón de
 navegación entre hubs es: `get_tree().change_scene(...)` + `yield(tree, "idle_frame")`
 + `configure(...)` para pasar parámetros al siguiente hub.
 
+### focus_nav.gd
+
+Utilidades de navegación de foco (D-pad/TV) compartidas por menús y hubs
+(helper estático, `extends Reference`).
+
+- `FocusNav.grab_first(root) -> bool` — enfoca el primer `Button` visible y
+  habilitado en orden de árbol (recursivo).
+- `FocusNav.set_skippable(btn, disabled)` — marca `disabled` y pone
+  `focus_mode = FOCUS_NONE` para que el D-pad salte los controles
+  deshabilitados (Continuar sin partida, zócalos vacíos en continue).
+- `FocusNav.enable_scroll_follow(scroll)` — activa `ScrollContainer.follow_focus`
+  y conecta `focus_entered → ensure_control_visible` en todos los botones del
+  contenido (evita los scrollbars internos del ScrollContainer).
+- `FocusNav.popup_open(root) -> bool` — `true` si algún `Popup`/diálogo hijo
+  está visible; los `_input` de back lo usan para no cerrar dos capas a la vez.
+
 ### main_menu.gd
 
 Menú principal. `MENU_ITEMS`: Modo historia (`StoryHub.tscn`), Packs comunitarios
@@ -338,16 +418,30 @@ Menú principal. `MENU_ITEMS`: Modo historia (`StoryHub.tscn`), Packs comunitari
 - `_build_ui()` — icono (`assets/tumbleboy/icon.png`), título, subtítulo,
   botones 400×50, hint con fondo.
 - `_on_item_pressed(item)` — navega o sale.
+- `_input(ev)` — con `back_just_pressed()` (ESC, BACK de Android o botón B del
+  mando) **sale de la app** (el menú principal es la única pantalla en la que
+  Back cierra el juego).
+
+### credits.gd
+
+Pantalla de créditos.
+
+- `_on_back()` — vuelve al menú principal.
+- `_input(ev)` — `back_just_pressed()` vuelve al menú.
+- Variable: `back_button` (etiqueta "Volver").
 
 ### story_hub.gd
 
 Modo historia: **Nueva Partida** / **Continuar** / **Volver**.
 
-- `_update_continue()` — activa/desactiva Continuar y muestra
+- `_update_continue()` — activa/desactiva Continuar (con
+  `FocusNav.set_skippable`, sin partida queda sin foco) y muestra
   "Continuar — nivel X/Y" según el primer zócalo con partida.
 - `_on_new()` / `_on_continue()` — abren `SlotPicker` con
   `configure("story", "historia", "new" | "continue")`.
 - `_on_back()` — vuelve a MainMenu.
+- `_input(ev)` — `back_just_pressed()` vuelve a MainMenu (con guard
+  `FocusNav.popup_open(self)`).
 - Variables: `buttons: Array` (3 botones).
 
 ### slot_picker.gd
@@ -358,9 +452,12 @@ Selector de zócalos genérico (historia y packs).
   `id` el identificador, `i` el intent (`"new"` | `"continue"`).
 - Muestra 3 botones de zócalo + (si `i == "new"`) la opción "Sin guardado".
 - `_refresh_slots()` — etiqueta cada zócalo ("Zócalo N — Historia: nivel X/Y" o
-  "Vacío"); en modo `continue` deshabilita los vacíos.
+  "Vacío"); en modo `continue` marca los vacíos con `FocusNav.set_skippable`
+  (sin foco).
 - `_on_slot(index)` — en `new` sobre zócalo ocupado pide confirmación de
   sobrescritura (`ConfirmationDialog`); luego `_start_game(index)`.
+- `_on_dialog_closed()` — al cerrarse un diálogo (señal `popup_hide`) espera 2
+  frames y restaura el foco al primer botón habilitado.
 - `_start_game(index)` — `begin_session(...)` y `_launch(completed)`.
 - `_launch(start)` — extrae el pack si corresponde, `play_levels(...)` y
   `LevelQueue.start_index = start` (después de `play_levels`).
@@ -386,11 +483,34 @@ Packs comunitarios: menú → **Packs descargados** / **Packs online** / Volver.
   y re-renderiza.
 - Cada lista (descargados/online) vive dentro de un `ScrollContainer`
   (`desc_scroll`, `online_scroll`) con foco-follow: al navegar con flechas/D-pad
-  el scroll sigue al botón enfocado (`_wire_scroll_follow`).
+  el scroll sigue al botón enfocado (`FocusNav.enable_scroll_follow`).
+- Las dos listas comparten el estilo de **Packs online**: columna de **700px
+  centrada horizontalmente** (`desc_col` / `online_col`, `SIZE_SHRINK_CENTER`)
+  y filas `PackRow` con botones de 120×36. Los botones de *descargados* son
+  Jugar (120×36) y Desinstalar.
+- Thumbnails online: `_thumb_nodes: {id → TextureRect}`; `_on_thumbnail_ready`
+  actualiza solo la textura del nodo correspondiente (no reconstruye la lista,
+  para no mover el foco ni re-descargar).
+- **Foco Packs Online (datos asíncronos)**: la respuesta de red llega de forma
+  asíncrona y `_render_online()` reconstruye la lista (`queue_free`), lo que
+  libera el botón enfocado a fin de frame. Patrón estándar de apps con datos de
+  internet: `_render_online()` captura primero `_online_focus_id` con
+  `_focused_online_id()` (id del pack cuyo botón está enfocado), y tras
+  reconstruir llama `call_deferred("_restore_online_focus")`, que espera 2
+  frames (para que el botón viejo desaparezca) y devuelve el foco al mismo pack
+  (`_grab_button_for_row`), o al primer botón, o a "Actualizar" si ya no existe.
+  No actúa si el panel no está visible o hay un diálogo abierto
+  (`FocusNav.popup_open`).
+- Botones "Instalado" (pack ya descargado) se marcan con
+  `FocusNav.set_skippable` para que el D-pad no se quede en ellos.
+- `_input(ev)` — con `back_just_pressed()` (incluye el botón B del mando)
+  navega por paneles; `FocusNav.popup_open(self)` evita cerrar el diálogo y el
+  panel a la vez. `_on_dialog_closed()` restaura el foco a la lista tras cerrar
+  diálogos.
 - Variables: `store`, `menu_panel`, `descargados_panel`, `online_panel`,
   `desc_scroll`, `online_scroll`, `desc_vbox`, `online_vbox`, `online_status`,
   `entries`, `download_dialog`, `uninstall_dialog`, `pending_download`,
-  `pending_uninstall`.
+  `pending_uninstall`, `_thumb_nodes`.
 
 ### editor_hub.gd
 
@@ -411,8 +531,15 @@ Editor de niveles: **Niveles propios** (con Borrador arriba si existe) / **Packs
 - `_on_create_pack()` — abre el editor y llama `editor.open_pack_panel()`.
 - `_on_new_level()` — abre el editor vacío.
 - Cada lista (niveles/packs propios) vive dentro de un `ScrollContainer`
-  (`niveles_scroll`, `packs_scroll`) con foco-follow igual que
-  `packs_community.gd`.
+  (`niveles_scroll`, `packs_scroll`) con foco-follow (`FocusNav.enable_scroll_follow`).
+- Las dos listas comparten el estilo de **Packs online**: columna de **700px
+  centrada horizontalmente** (`niveles_col` / `packs_col`, `SIZE_SHRINK_CENTER`).
+  *Niveles propios*: filas centradas con info fija de 400px ("nombre — autor" +
+  instrucciones con autowrap, sin miniatura) y botones Jugar/Editar/Eliminar de
+  84×36. *Packs propios*: filas `PackRow` con botones de 120×36 (Jugar + Eliminar).
+- `_input(ev)` — con `back_just_pressed()` (incluye botón B del mando) cierra
+  paneles o vuelve al hub; `_on_dialog_closed()` restaura el foco tras los
+  diálogos de borrado.
 - Variables: `hub_panel`, `niveles_panel`, `packs_panel`, `niveles_scroll`,
   `packs_scroll`, `niveles_vbox`, `packs_vbox`, `delete_dialog`,
   `pending_delete`.
@@ -424,9 +551,16 @@ Editor de niveles: **Niveles propios** (con Borrador arriba si existe) / **Packs
 
 ### touch_controls.gd
 
-Capa táctil para Android: joystick virtual + botones A/B. Actualiza
-`InputManager.virtual_move` y dispara `confirm`/`back`. Solo relevante en
-dispositivos táctiles.
+Capa táctil para móvil (`visible = InputManager.is_mobile()`): joystick virtual
+a la izquierda y un botón a la derecha **del mismo tamaño que el análogo** para
+alternar entre **Mando** (joystick) y **Acelerómetro**. Adaptativo: recalcula
+posiciones con `_recalculate_positions()` al cambiar el tamaño del viewport (no
+usa la ventana fija de 1200×825). Actualiza `InputManager.virtual_move`; el
+release de cada control se identifica por **índice de touch**, de modo que
+soltar fuera del radio no lo deja "pulsado", y **devuelve el knob al centro**
+(`knob_offset = ZERO` + `update()` para redibujarlo al instante). En modo
+Acelerómetro oculta el joystick (`_update_mode_ui`). Se conecta a
+`InputManager.control_mode_changed`.
 
 ## Escenas (`scenes/`)
 
@@ -486,7 +620,12 @@ Ver `packs/README.md` para el flujo completo de creación y aporte.
 - **`tests/smoke_test.gd`** (`res://scenes/SmokeTest.tscn`, headless):
   niveles (21), parser, board, ball, escena, editor, ZIP round-trip,
   zócalos de SaveData, LevelQueue, StoryHub, SlotPicker, PacksCommunity,
-  EditorHub y MainMenu. Resultado: `SMOKE TEST: ALL PASS`.
+  EditorHub, MainMenu, FocusNav (`set_skippable`/`grab_first`/`popup_open`),
+  settings round-trip (`control_mode`), TouchControls (joystick → `virtual_move`,
+  release por índice con knob al centro, toggle Mando/Acelerómetro y tamaño del
+  botón derecho) y modo foco UI del editor (incluida la transición celda ↔
+  botones en los bordes del grid).
+  Resultado: `SMOKE TEST: ALL PASS`.
 - **`tests/online_test.gd`** (`res://tests/OnlineTest.tscn`, requiere red y
   ventana): índice (2 packs), descarga, ETag/304, thumbnail.
 - **`tests/pack_levels_test.gd`** (`res://tests/PackLevelsTest.tscn`, headless):

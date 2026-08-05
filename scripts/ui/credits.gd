@@ -36,7 +36,7 @@ func _build_ui():
 
 	col.add_child(_section_label("TUMBLEBOY REBORN", 20, true))
 	col.add_child(_line_label("Desarrollado por Aleperix"))
-	col.add_child(_line_label("Hecho para TuPlanetXO"))
+	col.add_child(_line_label("Hecho para XO Galaxy"))
 
 	col.add_child(_spacer(10))
 	col.add_child(_section_label("Creadores originales de TumbleBoy:", 17, true))
@@ -45,7 +45,6 @@ func _build_ui():
 
 	col.add_child(_spacer(10))
 	col.add_child(_section_label("Agradecimientos:", 17, true))
-	col.add_child(_line_label("Álvaro Benítez — Fundador de TuPlanetXO"))
 	col.add_child(_line_label("Gummi — Recuperación del Lost Media"))
 	col.add_child(_line_label("SugarLabs — quienes hicieron posible este juego en las XO"))
 	col.add_child(_line_label("github.com/sugarlabs/tumbleboy-activity", 13))
@@ -53,7 +52,7 @@ func _build_ui():
 	col.add_child(_spacer(14))
 
 	back_button = Button.new()
-	back_button.text = "Volver  (B)"
+	back_button.text = "Volver"
 	back_button.focus_mode = Control.FOCUS_ALL
 	back_button.rect_min_size = Vector2(300, 44)
 	back_button.add_font_override("font", UIFonts.make_font(16))
@@ -96,6 +95,6 @@ func _on_back():
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
 
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
 			_on_back()

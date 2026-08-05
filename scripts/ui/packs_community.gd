@@ -5,6 +5,8 @@ extends Control
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const PackRow = preload("res://scripts/ui/pack_row.gd")
+const FocusNav = preload("res://scripts/ui/focus_nav.gd")
+const FocusGrab = preload("res://scripts/ui/focus_grab.gd")
 
 var store: Node
 var menu_panel: Control
@@ -25,6 +27,13 @@ var menu_buttons: Array = []
 var desc_back: Button
 var online_refresh: Button
 var online_back: Button
+var desc_col: VBoxContainer
+var online_col: VBoxContainer
+var _thumb_nodes: Dictionary = {}
+var _online_grab_pending := false
+var _online_focus_id := ""
+var _restore_steps := 0
+var _panel_grabber: Reference = null
 
 func _ready():
 	store = preload("res://scripts/tumbleboy/pack_store.gd").new()
@@ -104,7 +113,7 @@ func _build_menu():
 	col.add_child(spacer2)
 
 	var back := Button.new()
-	back.text = "Volver  (B)"
+	back.text = "Volver"
 	back.focus_mode = Control.FOCUS_ALL
 	back.rect_min_size = Vector2(400, 44)
 	back.add_font_override("font", UIFonts.make_font(16))
@@ -146,10 +155,11 @@ func _build_descargados():
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGN_CENTER
 	col.add_constant_override("separation", 6)
-	col.rect_min_size = Vector2(600, 0)
+	col.rect_min_size = Vector2(700, 0)
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
+	desc_col = col
 
 	var title := Label.new()
 	title.text = "PACKS DESCARGADOS"
@@ -166,21 +176,25 @@ func _build_descargados():
 
 	desc_vbox = VBoxContainer.new()
 	desc_vbox.alignment = BoxContainer.ALIGN_CENTER
-	desc_vbox.add_constant_override("separation", 6)
+	desc_vbox.add_constant_override("separation", 10)
 	desc_vbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	desc_scroll.add_child(desc_vbox)
 
 	var spacer := Control.new()
-	spacer.rect_min_size = Vector2(0, 8)
+	spacer.rect_min_size = Vector2(0, 6)
 	col.add_child(spacer)
 
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGN_CENTER
+	row.add_constant_override("separation", 16)
+	col.add_child(row)
+
 	var back := Button.new()
-	back.text = "Volver  (B)"
-	back.focus_mode = Control.FOCUS_ALL
-	back.rect_min_size = Vector2(300, 44)
-	back.add_font_override("font", UIFonts.make_font(16))
+	back.text = "Volver"
+	back.rect_min_size = Vector2(160, 36)
+	back.add_font_override("font", UIFonts.make_font(15))
 	back.connect("pressed", self, "_on_close_descargados")
-	col.add_child(back)
+	row.add_child(back)
 	desc_back = back
 
 	descargados_panel.visible = false
@@ -202,17 +216,15 @@ func _refresh_descargados():
 		var thumb = PackReader.get_thumbnail_texture(PackReader.PACKS_DIR + id + ".zip")
 		var play_btn := Button.new()
 		play_btn.text = "Jugar"
-		play_btn.add_font_override("font", UIFonts.make_font(14))
-		play_btn.rect_min_size = Vector2(100, 36)
+		play_btn.rect_min_size = Vector2(120, 36)
 		play_btn.connect("pressed", self, "_on_pack_play", [p])
 		var uninstall_btn := Button.new()
 		uninstall_btn.text = "Desinstalar"
-		uninstall_btn.add_font_override("font", UIFonts.make_font(14))
 		uninstall_btn.rect_min_size = Vector2(120, 36)
 		uninstall_btn.connect("pressed", self, "_on_uninstall", [id])
 		var row = PackRow.make(p, thumb, [play_btn, uninstall_btn])
 		desc_vbox.add_child(row)
-	_wire_scroll_follow(desc_scroll, desc_vbox)
+	FocusNav.enable_scroll_follow(desc_scroll)
 
 func _on_pack_play(p: Dictionary):
 	var id: String = str(p.get("id", ""))
@@ -242,6 +254,7 @@ func _build_online():
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(col)
+	online_col = col
 
 	var title := Label.new()
 	title.text = "PACKS ONLINE"
@@ -287,7 +300,7 @@ func _build_online():
 	online_refresh = refresh
 
 	var back := Button.new()
-	back.text = "Volver  (B)"
+	back.text = "Volver"
 	back.rect_min_size = Vector2(160, 36)
 	back.add_font_override("font", UIFonts.make_font(15))
 	back.connect("pressed", self, "_on_close_online")
@@ -297,26 +310,61 @@ func _build_online():
 	online_panel.visible = false
 
 func _render_online():
+	_online_focus_id = _focused_online_id()
 	for ch in online_vbox.get_children():
 		ch.queue_free()
+	_thumb_nodes = {}
 	if entries.size() == 0:
 		online_vbox.add_child(_section_label("(no hay packs publicados todavía)"))
-		if online_panel.visible:
+		if online_panel.visible and _online_grab_pending:
 			online_refresh.grab_focus()
+		_online_grab_pending = false
 		return
 	for e in entries:
 		online_vbox.add_child(_online_row(e))
-	_wire_scroll_follow(online_scroll, online_vbox)
-	if online_panel.visible:
-		if not _grab_first_button(online_vbox):
+	FocusNav.enable_scroll_follow(online_scroll)
+	if online_panel.visible and (_online_grab_pending or get_focus_owner() == null):
+		if not FocusNav.grab_first(online_vbox):
 			online_refresh.grab_focus()
+	_online_grab_pending = false
+	_restore_online_focus()
 
-func _wire_scroll_follow(scroll: ScrollContainer, root: Node):
-	for ch in root.get_children():
-		if ch is Button and not ch.is_connected("focus_entered", scroll, "ensure_control_visible"):
-			ch.connect("focus_entered", scroll, "ensure_control_visible", [ch])
-		if ch.get_child_count() > 0:
-			_wire_scroll_follow(scroll, ch)
+# Restaura el foco tras refrescar la lista online. La respuesta de red llega de
+# forma asíncrona y _render_online reconstruye los nodos (queue_free), así que
+# hay que esperar un par de frames para que el botón viejo desaparezca antes de
+# devolver el foco al mismo pack (o al primero si ya no está).
+func _restore_online_focus():
+	_restore_steps = 2
+	if not get_tree().is_connected("idle_frame", self, "_on_restore_tick"):
+		get_tree().connect("idle_frame", self, "_on_restore_tick")
+
+func _on_restore_tick():
+	_restore_steps -= 1
+	if _restore_steps > 0:
+		return
+	get_tree().disconnect("idle_frame", self, "_on_restore_tick")
+	if not online_panel.visible or FocusNav.popup_open(self):
+		return
+	if _online_focus_id != "" and _grab_button_for_row(_online_focus_id):
+		_online_focus_id = ""
+		return
+	if FocusNav.grab_first(online_vbox):
+		_online_focus_id = ""
+		return
+	online_refresh.grab_focus()
+	_online_focus_id = ""
+
+func _focused_online_id() -> String:
+	var fo = get_focus_owner()
+	if fo == null or not is_instance_valid(fo):
+		return ""
+	var row: Node = fo.get_parent()
+	if row == null:
+		return ""
+	for id in _thumb_nodes.keys():
+		if is_instance_valid(_thumb_nodes[id]) and _thumb_nodes[id].get_parent() == row:
+			return id
+	return ""
 
 func _online_row(e: Dictionary) -> Control:
 	var id: String = e.get("id", "")
@@ -335,6 +383,7 @@ func _online_row(e: Dictionary) -> Control:
 	if tex == null:
 		store.download_thumbnail(e)
 	thumb.texture = tex
+	_thumb_nodes[id] = thumb
 	hb.add_child(thumb)
 
 	var vb := VBoxContainer.new()
@@ -361,7 +410,7 @@ func _online_row(e: Dictionary) -> Control:
 	dl.add_font_override("font", UIFonts.make_font(14))
 	if store.is_pack_installed(id):
 		dl.text = "Instalado"
-		dl.disabled = true
+		FocusNav.set_skippable(dl, true)
 	else:
 		dl.text = "Descargar"
 		dl.connect("pressed", self, "_on_download", [e])
@@ -378,22 +427,17 @@ func _section_label(text: String) -> Label:
 
 # --- Acciones ---
 
-func _grab_first_button(root: Node) -> bool:
-	if root is Button and not root.disabled:
-		root.grab_focus()
-		return true
-	for ch in root.get_children():
-		if _grab_first_button(ch):
-			return true
-	return false
+func _panel_grabber() -> Reference:
+	if _panel_grabber == null:
+		_panel_grabber = FocusGrab.new()
+	return _panel_grabber
 
 func _on_open_descargados():
 	menu_panel.visible = false
 	_refresh_descargados()
 	descargados_panel.visible = true
 	descargados_panel.raise()
-	if not _grab_first_button(desc_vbox):
-		desc_back.grab_focus()
+	_panel_grabber().start(get_tree(), desc_vbox, desc_back)
 
 func _on_close_descargados():
 	descargados_panel.visible = false
@@ -405,6 +449,7 @@ func _on_open_online():
 	menu_panel.visible = false
 	online_panel.visible = true
 	online_panel.raise()
+	_online_grab_pending = true
 	online_refresh.grab_focus()
 	store.refresh_index()
 
@@ -438,6 +483,7 @@ func _on_download(e: Dictionary):
 		download_dialog.get_ok().text = "Descargar"
 		download_dialog.get_cancel().text = "Cancelar"
 		download_dialog.connect("confirmed", self, "_on_download_confirmed")
+		download_dialog.connect("popup_hide", self, "_on_dialog_closed")
 		add_child(download_dialog)
 	download_dialog.dialog_text = "¿Descargar el pack '" + name + "'?\n"
 	if e.has("author"):
@@ -459,6 +505,7 @@ func _on_uninstall(id: String):
 		uninstall_dialog.get_ok().text = "Desinstalar"
 		uninstall_dialog.get_cancel().text = "Cancelar"
 		uninstall_dialog.connect("confirmed", self, "_on_uninstall_confirmed")
+		uninstall_dialog.connect("popup_hide", self, "_on_dialog_closed")
 		add_child(uninstall_dialog)
 	uninstall_dialog.dialog_text = "¿Desinstalar el pack '" + id + "'?\nSe eliminarán todos sus niveles."
 	uninstall_dialog.popup_centered()
@@ -476,18 +523,40 @@ func _on_pack_downloaded(id: String, ok: bool, msg: String):
 		SaveData.mark_pack_downloaded(id)
 		online_status.text = "Pack '" + id + "' descargado"
 		_render_online()
+		if online_panel.visible and not _grab_button_for_row(id):
+			if not FocusNav.grab_first(online_vbox):
+				online_refresh.grab_focus()
 	else:
 		online_status.text = "Error: " + msg
 
 func _on_thumbnail_ready(id: String):
-	_render_online()
+	if _thumb_nodes.has(id) and is_instance_valid(_thumb_nodes[id]):
+		_thumb_nodes[id].texture = store.get_thumbnail_texture(id)
+
+func _grab_button_for_row(id: String) -> bool:
+	if _thumb_nodes.has(id) and is_instance_valid(_thumb_nodes[id]):
+		var row: Node = _thumb_nodes[id].get_parent()
+		if row != null:
+			for ch in row.get_children():
+				if ch is Button and not ch.disabled:
+					ch.grab_focus()
+					return true
+	return false
 
 func _on_back():
 	get_tree().change_scene("res://scenes/MainMenu.tscn")
 
+func _on_dialog_closed():
+	if online_panel.visible:
+		_panel_grabber().start(get_tree(), online_vbox, online_refresh)
+	elif descargados_panel.visible:
+		_panel_grabber().start(get_tree(), desc_vbox, desc_back)
+
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
+			if FocusNav.popup_open(self):
+				return
 			if online_panel.visible:
 				_on_close_online()
 			elif descargados_panel.visible:

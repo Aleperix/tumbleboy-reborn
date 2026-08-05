@@ -5,6 +5,7 @@ extends Control
 
 const UIFonts = preload("res://scripts/ui/ui_fonts.gd")
 const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
+const FocusNav = preload("res://scripts/ui/focus_nav.gd")
 
 var game_mode: String = "story"
 var game_id: String = "historia"
@@ -96,7 +97,7 @@ func _build_ui():
 	col.add_child(spacer3)
 
 	var back := Button.new()
-	back.text = "Volver  (B)"
+	back.text = "Volver"
 	back.focus_mode = Control.FOCUS_ALL
 	back.rect_min_size = Vector2(460, 44)
 	back.add_font_override("font", UIFonts.make_font(16))
@@ -155,14 +156,11 @@ func _refresh_slots():
 			var tot = info.get("total", 1)
 			btn.text = "Zócalo %d — %s: nivel %d/%d" % [i + 1, mode_label, comp + 1, tot]
 			btn.add_color_override("font_color", Color(0.95, 0.93, 0.88))
-			btn.disabled = false
+			FocusNav.set_skippable(btn, false)
 		else:
 			btn.text = "Zócalo %d — Vacío" % (i + 1)
 			btn.add_color_override("font_color", Color(0.65, 0.62, 0.72))
-			if intent == "continue":
-				btn.disabled = true
-			else:
-				btn.disabled = false
+			FocusNav.set_skippable(btn, intent == "continue")
 
 func _on_slot(index: int):
 	var key := SaveData.get_game_key(game_mode, game_id)
@@ -177,8 +175,14 @@ func _confirm_overwrite(index: int):
 	dialog.window_title = "Confirmar"
 	dialog.rect_min_size = Vector2(300, 150)
 	dialog.connect("confirmed", self, "_start_game", [index])
+	dialog.connect("popup_hide", self, "_on_dialog_closed")
 	add_child(dialog)
 	dialog.popup_centered()
+
+func _on_dialog_closed():
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	_grab_first_enabled()
 
 func _start_game(index: int):
 	var key := SaveData.get_game_key(game_mode, game_id)
@@ -226,6 +230,8 @@ func _on_back():
 	get_tree().change_scene("res://scenes/StoryHub.tscn" if game_mode == "story" else "res://scenes/PacksCommunity.tscn")
 
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
+			if FocusNav.popup_open(self):
+				return
 			_on_back()

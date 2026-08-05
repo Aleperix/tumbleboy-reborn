@@ -82,14 +82,62 @@ Los exports release pueden tardar varios minutos la primera vez (compilan el
 proyecto Gradle); verás `export: begin: Exporting for Android steps: N` al
 arrancar y `export: end` al terminar.
 
+## Launcher de Android TV
+
+Para que el juego aparezca en la fila de apps del launcher de Android TV la
+activity debe declarar el intent-filter **`LEANBACK_LAUNCHER`** además del
+`LAUNCHER` normal:
+
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.MAIN" />
+    <category android:name="android.intent.category.LAUNCHER" />
+</intent-filter>
+<intent-filter>
+    <action android:name="android.intent.action.MAIN" />
+    <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+</intent-filter>
+```
+
+Con ambos filtros la app sigue funcionando como una app normal en teléfonos
+(el launcher de teléfono usa `LAUNCHER`; el de TV usa `LEANBACK_LAUNCHER`).
+
+> ⚠️ **En Godot 3.6 NO existe la opción `package/show_in_android_tv`.** Las
+> claves `package/show_in_android_tv`, `package/show_in_app_library` y
+> `package/show_as_launcher_app` son de Godot 4.x: si aparecen en el
+> `export_presets.cfg`, Godot 3.6 las ignora en silencio y el APK sale **sin**
+> el filtro de TV. La forma correcta en 3.6 es editar el manifest del custom
+> build:
+
+1. `res://android/build/AndroidManifest.xml` es el manifest *main* del
+   proyecto Gradle. El exportador solo reescribe las regiones
+   `<!--CHUNK_..._BEGIN/END-->` y los atributos del `<application>` tras
+   `android:icon="@mipmap/icon"` (ver `platform/android/export/export_plugin.cpp`,
+   bloque `//fix manifest`); **todo lo demás del archivo se preserva entre
+   exports**, así que el `<intent-filter>` añadido dentro de la activity se
+   conserva.
+2. El manifest se mergea con el temporal `android/build/src/release/AndroidManifest.xml`
+   que genera el exportador (`_write_tmp_manifest`): los intent-filters del
+   manifest main se fusionan sobre la activity final `com.godot.game.GodotApp`.
+3. Se añade también `<uses-feature android:name="android.software.leanback"
+   android:required="false" />`: `required="false"` mantiene la instalación en
+   teléfonos y cajas sin TV.
+
+> Este manifest está **versionado en git** (es la única excepción a
+> `/android/` en `.gitignore`). Al reinstalar el *Android build template*
+> desde el menú del editor se sobrescribe con el template de serie; hay que
+> volver a aplicar el cambio. La activity ya lleva `android:exported="true"`
+> (requisito para los launchers en Android 12+).
+
 ## Instalar en caja/TV
 
 ```
 adb install build/tumbleboy-reborn-debug.apk
 ```
 
-En TV: la app aparece en la parrilla (es una Activity normal, no TV-only, así que
-también aparece en teléfonos).
+En TV: la app aparece en la parrilla del launcher (activity con
+`LEANBACK_LAUNCHER`, pero no TV-only: también aparece y se instala en
+teléfonos).
 
 ## Godot 3.6 sin sudo (alternativa)
 
@@ -107,14 +155,25 @@ XDG_CONFIG_HOME=~/.config/godot3-env \
 ## Pruebas
 
 1. **Desktop Linux**: `godot3 --path .` — verificar menú, hubs, back/ESC.
-2. **Smoke tests headless**: `godot3 --headless --path . res://scenes/SmokeTest.tscn`.
-3. **Box Rockchip**: `adb install` + comprobar FPS estables en TumbleBoy
+2. **Controles táctiles en escritorio**: `godot3 --path . -- --force-touch`
+   (`--force-touch` activa `InputManager.is_mobile()` y muestra los controles
+   táctiles; el mouse emula el touch con `emulate_touch_from_mouse=true`, ya
+   configurado en `project.godot`).
+3. **Smoke tests headless**: `godot3 --headless --path . res://scenes/SmokeTest.tscn`.
+4. **Box Rockchip**: `adb install` + comprobar FPS estables en TumbleBoy
    (es exigente por la física y el tablero grande).
 
 ## Controles
 
 | Acción | Teléfono | TV/control |
 |--------|----------|------------|
-| Mover | Joystick virtual / toque directo | D-pad / palanca izquierda |
-| Confirmar | Botón táctil A / toque | Botón A / Select |
-| Atrás | Botón táctil B / back del sistema | Botón B / Back del control |
+| Mover | Mando (joystick) / Acelerómetro | D-pad / palanca izquierda |
+| Modo de control | Botón derecho (tamaño del análogo): **Mando** ↔ **Acelerómetro** (se recuerda entre partidas) | — |
+| Confirmar | Toque directo | Botón A / Select |
+| Atrás | Back del sistema | Botón B / Back del control |
+| Foco UI del editor (TV) | — | F2 / botón Y |
+
+> El modo de control móvil (Mando o Acelerómetro) se guarda en `SaveData.settings`
+> (`control_mode`) y se restaura al iniciar. En el editor, el D-pad pinta por
+> defecto; al llegar al tope de las celdas el foco salta a los botones (y a la
+> inversa), y con **F2 / Y** se activa el *modo foco UI* explícito.

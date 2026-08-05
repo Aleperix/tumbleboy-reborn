@@ -18,16 +18,25 @@ const JOY_BUTTON_BACK := 10
 
 signal confirm_pressed
 signal back_pressed
+signal control_mode_changed(mode)
+
+enum ControlMode { TOUCH, TILT }
 
 var virtual_move: Vector2 = Vector2.ZERO
 var virtual_pointer_pos: Vector2 = Vector2.ZERO
 var virtual_pointer_down: bool = false
+
+var control_mode: int = ControlMode.TOUCH
+
+var _tilt_calib := Vector2.ZERO
+var _tilt_smoothed := Vector2.ZERO
 
 func _init():
 	_build_input_map()
 
 func _ready():
 	set_process_input(true)
+	control_mode = SaveData.get_setting("control_mode", ControlMode.TOUCH)
 
 func _build_input_map():
 	_add_axis("move_up", "move_down", JOY_AXIS_1, JOY_DPAD_UP, JOY_DPAD_DOWN, KEY_W, KEY_UP, KEY_S, KEY_DOWN)
@@ -35,6 +44,7 @@ func _build_input_map():
 
 	_add_simple("confirm", [KEY_ENTER, KEY_SPACE, KEY_KP_ENTER], [JOY_BUTTON_A, JOY_BUTTON_START])
 	_add_simple("back", [KEY_ESCAPE, KEY_BACK], [JOY_BUTTON_B, JOY_BUTTON_BACK])
+	_add_simple("ui_toggle", [KEY_F2], [JOY_BUTTON_Y])
 
 	# Acciones de foco (necesarias para navegar botones con D-pad en TV)
 	_add_axis("ui_up", "ui_down", JOY_AXIS_1, JOY_DPAD_UP, JOY_DPAD_DOWN, KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN)
@@ -68,6 +78,10 @@ func _add_axis(neg_action: String, pos_action: String, joy_axis: int, dpad_neg: 
 	InputMap.action_add_event(pos_action, ev)
 
 func get_move_vector() -> Vector2:
+	if is_tilt_mode():
+		var tilt := _get_tilt_vector()
+		if tilt != Vector2.ZERO:
+			return tilt
 	var v := Vector2(
 		float(Input.is_action_pressed("move_right")) - float(Input.is_action_pressed("move_left")),
 		float(Input.is_action_pressed("move_down")) - float(Input.is_action_pressed("move_up"))
@@ -76,6 +90,15 @@ func get_move_vector() -> Vector2:
 		v = v.normalized()
 	if virtual_move.length_squared() > 0.0:
 		v = virtual_move
+	return v
+
+func get_hardware_move_vector() -> Vector2:
+	var v := Vector2(
+		float(Input.is_action_pressed("move_right")) - float(Input.is_action_pressed("move_left")),
+		float(Input.is_action_pressed("move_down")) - float(Input.is_action_pressed("move_up"))
+	)
+	if v.length_squared() > 1.0:
+		v = v.normalized()
 	return v
 
 func press_action(action: String):
@@ -95,8 +118,40 @@ func confirm_just_pressed() -> bool:
 func back_just_pressed() -> bool:
 	return Input.is_action_just_pressed("back") or Input.is_action_just_pressed("ui_cancel")
 
+func ui_toggle_just_pressed() -> bool:
+	return Input.is_action_just_pressed("ui_toggle")
+
 func has_joypad() -> bool:
 	return Input.get_connected_joypads().size() > 0
 
-func is_touch() -> bool:
-	return OS.has_feature("android") and not has_joypad()
+# --- Móvil: controles táctiles y modo tilt ---
+
+func is_mobile() -> bool:
+	if OS.has_feature("android"):
+		return true
+	return "--force-touch" in OS.get_cmdline_args()
+
+func set_control_mode(mode: int):
+	control_mode = mode
+	SaveData.set_setting("control_mode", mode)
+	emit_signal("control_mode_changed", mode)
+
+func is_tilt_mode() -> bool:
+	return control_mode == ControlMode.TILT and is_mobile()
+
+func recalibrate_tilt():
+	_tilt_calib = _raw_tilt()
+	_tilt_smoothed = Vector2.ZERO
+
+func _raw_tilt() -> Vector2:
+	var acc := Input.get_accelerometer()
+	return Vector2(acc.x, acc.y)
+
+func _get_tilt_vector() -> Vector2:
+	var raw := _raw_tilt() - _tilt_calib
+	var v := Vector2(raw.x, -raw.y)
+	if v.length() < 0.7:
+		return Vector2.ZERO
+	v = v.clamped(6.0)
+	_tilt_smoothed = _tilt_smoothed.linear_interpolate(v / 6.0, 0.3)
+	return _tilt_smoothed

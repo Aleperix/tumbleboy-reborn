@@ -99,6 +99,6 @@ func _on_item_pressed(item: Dictionary):
 		get_tree().change_scene(item["scene"])
 
 func _input(ev):
-	if ev is InputEventKey and ev.pressed and not ev.echo:
+	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
 		if InputManager.back_just_pressed():
 			get_tree().quit()

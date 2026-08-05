@@ -4,7 +4,10 @@
 *.import
 
 # Exports Android (binarios y secretos)
-/android/
+/android/*
+!/android/build/
+/android/build/*
+!/android/build/AndroidManifest.xml
 *.apk
 *.aab
 *.jks

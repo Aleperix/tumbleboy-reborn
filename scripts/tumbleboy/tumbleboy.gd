@@ -46,7 +46,7 @@ func _ready():
 	sb.bg_color = Color(0, 0, 0, 0.4)
 	level_label.add_stylebox_override("normal", sb)
 	add_child(level_label)
-	if InputManager.is_touch():
+	if InputManager.is_mobile():
 		add_child(TouchControlsScene.instance())
 
 func _process(delta: float):
@@ -80,6 +80,8 @@ func _unhandled_input(ev):
 		elif ev is InputEventKey and ev.pressed and not ev.echo:
 			_start_playing()
 		elif ev is InputEventMouseButton and ev.pressed:
+			_start_playing()
+		elif ev is InputEventScreenTouch and ev.pressed:
 			_start_playing()
 	elif state == State.PLAYING:
 		if InputManager.back_just_pressed():

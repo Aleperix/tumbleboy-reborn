@@ -19,6 +19,7 @@ const PackReader = preload("res://scripts/tumbleboy/pack_reader.gd")
 const ZipWriter = preload("res://scripts/tumbleboy/zip_writer.gd")
 const ZipReader = preload("res://scripts/tumbleboy/zip_reader.gd")
 const PackRow = preload("res://scripts/ui/pack_row.gd")
+const FocusNav = preload("res://scripts/ui/focus_nav.gd")
 
 var failures := 0
 
@@ -38,6 +39,7 @@ func _ready():
 	_test_main_menu()
 	_test_credits()
 	_test_play_button_toggle()
+	_test_editor_ui_mode()
 	_test_save_validation()
 	_test_editor_draft_load()
 	_test_thumbnail_zip()
@@ -46,7 +48,11 @@ func _ready():
 	_test_hub_draft_section()
 	_test_descargados_buttons()
 	_test_propios_buttons()
+	_test_focus_nav()
+	_test_settings()
+	_test_touch_controls()
 	yield(_test_list_layout(), "completed")
+	yield(_test_focus_reentry(), "completed")
 	_test_game_icon()
 	_test_pack_row()
 	yield(get_tree(), "idle_frame")
@@ -351,13 +357,18 @@ func _collect_texts(col: Node) -> Array:
 
 func _test_story_hub():
 	print("== story hub ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
 	var sh = StoryHubScene.instance()
 	add_child(sh)
 	_check(sh.buttons.size() == 3, "StoryHub con 3 botones (got %d)" % sh.buttons.size())
 	_check(sh.buttons[0].text == "Nueva Partida", "botón Nueva Partida")
 	_check(sh.buttons[2].text.begins_with("Volver"), "botón Volver")
 	_check(sh.buttons[1].text.begins_with("Continuar"), "botón Continuar presente")
+	_check(sh.buttons[1].disabled, "Continuar deshabilitado sin partida")
+	_check(sh.buttons[1].focus_mode == Control.FOCUS_NONE, "Continuar sin foco (FOCUS_NONE) sin partida")
 	sh.free()
+	_restore_save(backup)
 
 func _test_slot_picker():
 	print("== slot picker ==")
@@ -373,6 +384,8 @@ func _test_slot_picker():
 	sp.configure("story", "historia", "continue")
 	_check(sp.slot_buttons[1].text.find("nivel 6/21") >= 0, "continuar muestra nivel 6/21 en zócalo ocupado")
 	_check(sp.slot_buttons[2].disabled, "continuar deshabilita zócalo vacío")
+	_check(sp.slot_buttons[2].focus_mode == Control.FOCUS_NONE, "continuar quita foco al zócalo vacío")
+	_check(sp.slot_buttons[1].focus_mode == Control.FOCUS_ALL, "zócalo ocupado es enfocable")
 	SaveData.reset_all()
 	_restore_save(backup)
 	sp.free()
@@ -392,6 +405,16 @@ func _test_packs_community():
 	_check(pc.menu_panel.visible, "volver restaura menú")
 	var row = pc._online_row({"id": "mi_pack", "name": "Mi Pack", "author": "alguien", "description": "desc"})
 	_check(row != null and row is Control, "online_row construye la fila sin errores")
+	_check(pc._focused_online_id() == "", "sin foco en la lista, _focused_online_id devuelve vacío")
+	pc.online_vbox.add_child(row)
+	var dl: Button = null
+	for ch in row.get_children():
+		if ch is Button:
+			dl = ch
+	if dl != null and not dl.disabled:
+		dl.grab_focus()
+	_check(pc._focused_online_id() == "mi_pack", "_focused_online_id detecta el pack enfocado (got '%s')" % pc._focused_online_id())
+	pc.online_vbox.remove_child(row)
 	pc.free()
 
 func _test_editor_hub():
@@ -402,6 +425,7 @@ func _test_editor_hub():
 	_check(eh.niveles_panel.visible, "abrir niveles propios conmuta panel")
 	var wired := _count_wired(eh.niveles_vbox, eh.niveles_scroll)
 	_check(wired > 0, "botones conectados a ensure_control_visible (got %d)" % wired)
+	_check(eh.niveles_scroll.get("follow_focus") == true, "niveles_scroll sigue al foco")
 	eh._on_close_niveles()
 	eh._on_open_packs()
 	_check(eh.packs_panel.visible, "abrir packs propios conmuta panel")
@@ -465,7 +489,7 @@ func _test_credits():
 	print("== credits ==")
 	var cr = CreditsScene.instance()
 	add_child(cr)
-	for expected in ["CRÉDITOS", "Aleperix", "TuPlanetXO", "Tom Corbet", "Chris Jackson", "Eben Myers", "Bob Rost", "Álvaro Benítez", "Gummi", "SugarLabs"]:
+	for expected in ["CRÉDITOS", "Aleperix", "XO Galaxy", "Tom Corbet", "Chris Jackson", "Eben Myers", "Bob Rost", "Gummi", "SugarLabs"]:
 		_check(_find_text(cr, expected), "créditos muestran '%s'" % expected)
 	var bb = _back_button_of(cr)
 	_check(bb != null, "créditos tienen botón Volver")
@@ -641,11 +665,13 @@ func _test_list_layout():
 	pc._on_open_descargados()
 	var dh = yield(_wait_scroll_height(pc.desc_scroll), "completed")
 	_check(dh > 0.0, "desc_scroll con altura (got %.1f)" % dh)
+	_check(_col_centered(pc.desc_col), "columna descargados centrada (x=%.0f)" % pc.desc_col.get_global_rect().position.x)
 	pc._on_close_descargados()
 	pc._on_open_online()
 	var oh = yield(_wait_scroll_height(pc.online_scroll), "completed")
 	_check(oh > 0.0, "online_scroll con altura (got %.1f)" % oh)
 	_check(pc.online_vbox.get_child_count() > 0, "online_vbox con filas (got %d)" % pc.online_vbox.get_child_count())
+	_check(_col_centered(pc.online_col), "columna online centrada (x=%.0f)" % pc.online_col.get_global_rect().position.x)
 	pc.free()
 
 	var eh = EditorHubScene.instance()
@@ -654,10 +680,65 @@ func _test_list_layout():
 	eh._on_open_niveles()
 	var nh = yield(_wait_scroll_height(eh.niveles_scroll), "completed")
 	_check(nh > 0.0, "niveles_scroll con altura (got %.1f)" % nh)
+	_check(_col_centered(eh.niveles_col), "columna niveles propios centrada (x=%.0f)" % eh.niveles_col.get_global_rect().position.x)
 	eh._on_close_niveles()
 	eh._on_open_packs()
 	var ph = yield(_wait_scroll_height(eh.packs_scroll), "completed")
 	_check(ph > 0.0, "packs_scroll con altura (got %.1f)" % ph)
+	_check(_col_centered(eh.packs_col), "columna packs propios centrada (x=%.0f)" % eh.packs_col.get_global_rect().position.x)
+	eh.free()
+
+func _col_centered(col: Control) -> bool:
+	if col == null or col.get_parent() == null:
+		return false
+	var parent: Control = col.get_parent()
+	var target: float = (parent.get_size().x - col.get_size().x) * 0.5
+	return abs(col.get_global_rect().position.x - target) < 2.0
+
+func _test_focus_reentry():
+	print("== focus re-entry ==")
+	var pc = PacksCommunityScene.instance()
+	add_child(pc)
+	pc.rect_min_size = Vector2(1200, 825)
+	pc._on_open_descargados()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	var dfo = pc.get_focus_owner()
+	_check(dfo != null and dfo.is_inside_tree(), "foco vivo al entrar en descargados")
+	pc._on_close_descargados()
+	pc._on_open_descargados()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	dfo = pc.get_focus_owner()
+	_check(dfo != null and dfo.is_inside_tree(), "foco vivo al re-entrar en descargados")
+	pc.free()
+
+	var eh = EditorHubScene.instance()
+	add_child(eh)
+	eh.rect_min_size = Vector2(1200, 825)
+	eh._on_open_niveles()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	var nfo = eh.get_focus_owner()
+	_check(nfo != null and nfo.is_inside_tree(), "foco vivo al entrar en niveles")
+	eh._on_close_niveles()
+	eh._on_open_niveles()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	nfo = eh.get_focus_owner()
+	_check(nfo != null and nfo.is_inside_tree(), "foco vivo al re-entrar en niveles")
+	eh._on_close_niveles()
+	eh._on_open_packs()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	var pfo = eh.get_focus_owner()
+	_check(pfo != null and pfo.is_inside_tree(), "foco vivo al entrar en packs")
+	eh._on_close_packs()
+	eh._on_open_packs()
+	yield(get_tree(), "idle_frame")
+	yield(get_tree(), "idle_frame")
+	pfo = eh.get_focus_owner()
+	_check(pfo != null and pfo.is_inside_tree(), "foco vivo al re-entrar en packs")
 	eh.free()
 
 func _test_game_icon():
@@ -672,12 +753,149 @@ func _test_pack_row():
 	var row = PackRow.make(p, null, [])
 	_check(row is HBoxContainer, "pack_row retorna HBoxContainer")
 	_check(row.get_child_count() == 2, "pack_row sin botones: preview + info (got %d)" % row.get_child_count())
+	var info_box: Control = row.get_child(1)
+	_check(info_box is VBoxContainer and info_box.rect_min_size.x == 400, "info fija de 400px (got %s)" % str(info_box.rect_min_size))
+	var preview: Control = row.get_child(0)
+	_check(preview is TextureRect and preview.rect_min_size == Vector2(64, 64), "miniatura de 64px")
+	_check(info_box.get_child(0).text == "TestPack  —  Tester", "nombre — autor en una línea (got '%s')" % info_box.get_child(0).text)
 	var play_btn := Button.new()
 	play_btn.text = "Jugar"
 	var del_btn := Button.new()
 	del_btn.text = "Eliminar"
 	var row2 = PackRow.make(p, null, [play_btn, del_btn])
 	_check(row2.get_child_count() == 4, "pack_row con 2 botones: preview + info + 2 btns (got %d)" % row2.get_child_count())
+	_check(play_btn.rect_min_size == Vector2(120, 36), "botones de acción a 120x36")
+	var pdesc := { "name": "ConDesc", "author": "A", "description": "algo" }
+	var row3 = PackRow.make(pdesc, null, [])
+	_check(row3.get_child(1).get_child_count() == 2, "con descripción: info con 2 líneas (got %d)" % row3.get_child(1).get_child_count())
+
+func _test_editor_ui_mode():
+	print("== editor ui mode ==")
+	var ed = EditorScene.instance()
+	add_child(ed)
+	_check(not ed.ui_mode, "editor inicia en modo pintura")
+	_check(ed.play_button.focus_mode == Control.FOCUS_NONE, "toolbar sin foco en modo pintura")
+	_check(ed.ui_controls.size() >= 24, "ui_controls recoge toolbar + paleta (got %d)" % ed.ui_controls.size())
+	ed._toggle_ui_mode()
+	_check(ed.ui_mode, "toggle activa modo foco UI")
+	_check(ed.play_button.focus_mode == Control.FOCUS_ALL, "toolbar con foco en modo UI")
+	_check(ed.play_button.has_focus(), "play_button toma el foco al entrar en modo UI")
+	var all_focusable := true
+	for c in ed.ui_controls:
+		if c.focus_mode != Control.FOCUS_ALL:
+			all_focusable = false
+	_check(all_focusable, "todos los controles de UI enfocables en modo UI")
+	ed._toggle_ui_mode()
+	_check(not ed.ui_mode, "toggle vuelve a modo pintura")
+	_check(ed.play_button.focus_mode == Control.FOCUS_NONE, "toolbar sin foco al salir de modo UI")
+
+	ed.cursor_cell = Vector2(3, 3)
+	_check(not ed._try_ui_edge(Vector2(0, -1), Vector2(3, 3)), "desde el medio del grid no salta a UI")
+	ed.cursor_cell = Vector2(3, 0)
+	_check(ed._try_ui_edge(Vector2(0, -1), Vector2(3, 0)) and ed.ui_mode, "arriba en el tope salta a modo foco UI (toolbar)")
+	_check(ed.ui_controls[0].has_focus(), "el foco cae en la toolbar al entrar desde arriba")
+	ed._toggle_ui_mode()
+	_check(not ed.ui_mode, "vuelve a modo pintura tras el salto de arriba")
+	var bottom := Vector2(3, ed._visible_max_cell().y)
+	ed.cursor_cell = bottom
+	_check(ed._try_ui_edge(Vector2(0, 1), bottom) and ed.ui_mode, "abajo en el borde salta a modo foco UI (paleta)")
+	ed._toggle_ui_mode()
+	_check(not ed.ui_mode, "vuelve a modo pintura tras el salto de abajo")
+	ed._toggle_ui_mode()
+	ed._exit_ui_focus()
+	_check(not ed.ui_mode, "exit_ui_focus vuelve al tablero")
+	_check(ed.ui_controls[0].focus_neighbour_right == ed.ui_controls[1].get_path(), "toolbar cableada: Nuevo → Abrir")
+	_check(ed.ui_controls[1].focus_neighbour_left == ed.ui_controls[0].get_path(), "toolbar cableada: Abrir → Nuevo")
+	_check(ed.ui_fields.size() == 5, "ui_fields recoge los 5 campos editables (got %d)" % ed.ui_fields.size())
+	_check(ed.name_edit.focus_neighbour_right == ed.author_edit.get_path(), "fila 2 cableada: nombre → autor")
+	_check(ed.theme_option.focus_neighbour_left == ed.author_edit.get_path(), "fila 2 cableada: autor → tema")
+	_check(ed.name_edit.focus_neighbour_top == ed.ui_controls[0].get_path(), "fila 1 → fila 2: nombre sube a Nuevo")
+	_check(ed.ui_controls[0].focus_neighbour_bottom == ed.name_edit.get_path(), "fila 2 → fila 1: Nuevo baja a nombre")
+	_check(ed.desc_edit.focus_neighbour_top == ed.name_edit.get_path(), "fila 3 → fila 2: descripción sube a nombre")
+	_check(ed.name_edit.focus_neighbour_bottom == ed.desc_edit.get_path(), "fila 2 → fila 3: nombre baja a descripción")
+	var first_palette: Control = ed.ui_controls[ed.toolbar_controls.size()]
+	_check(first_palette.focus_neighbour_top == ed.desc_edit.get_path(), "paleta → fila 3: primer bloque sube a descripción")
+	_check(ed.desc_edit.focus_neighbour_bottom == first_palette.get_path(), "fila 3 → paleta: descripción baja al primer bloque")
+	ed.free()
+
+func _test_focus_nav():
+	print("== focus nav ==")
+	var root := VBoxContainer.new()
+	var btn := Button.new()
+	btn.text = "Uno"
+	var b2 := Button.new()
+	b2.text = "Dos"
+	root.add_child(btn)
+	root.add_child(b2)
+	add_child(root)
+	FocusNav.set_skippable(b2, true)
+	_check(b2.disabled and b2.focus_mode == Control.FOCUS_NONE, "set_skippable deshabilita y quita foco")
+	FocusNav.set_skippable(b2, false)
+	_check(not b2.disabled and b2.focus_mode == Control.FOCUS_ALL, "set_skippable reactiva y restaura foco")
+	var grabbed := FocusNav.grab_first(root)
+	_check(grabbed and btn.has_focus(), "grab_first enfoca el primer botón habilitado")
+	_check(not FocusNav.popup_open(root), "popup_open falso sin popups")
+	var dlg := ConfirmationDialog.new()
+	root.add_child(dlg)
+	dlg.popup_centered()
+	_check(FocusNav.popup_open(root), "popup_open detecta popup abierto")
+	dlg.hide()
+	dlg.free()
+	root.free()
+
+func _test_settings():
+	print("== settings ==")
+	var backup := _backup_save()
+	SaveData.reset_all()
+	_check(SaveData.get_setting("control_mode", 0) == InputManager.ControlMode.TOUCH, "control_mode por defecto = TOUCH")
+	SaveData.set_setting("control_mode", InputManager.ControlMode.TILT)
+	_check(SaveData.get_setting("control_mode", 0) == InputManager.ControlMode.TILT, "set_setting guarda el valor")
+	InputManager.set_control_mode(InputManager.ControlMode.TILT)
+	_check(InputManager.control_mode == InputManager.ControlMode.TILT, "set_control_mode cambia el modo")
+	_check(SaveData.get_setting("control_mode", 0) == InputManager.ControlMode.TILT, "set_control_mode persiste en settings")
+	_restore_save(backup)
+	InputManager.control_mode = SaveData.get_setting("control_mode", InputManager.ControlMode.TOUCH)
+
+func _test_touch_controls():
+	print("== touch controls ==")
+	var backup := _backup_save()
+	var tc = preload("res://scripts/ui/touch_controls.gd").new()
+	add_child(tc)
+	tc.visible = true
+	tc._recalculate_positions()
+	_check(tc.joystick_center.y > 0.0, "joystick posicionado según viewport")
+	_check(tc.joystick_visible, "joystick visible por defecto")
+	_check(tc.toggle_radius == tc.joystick_radius, "botón derecho del mismo tamaño que el análogo")
+	_check(tc.toggle_center.x > tc.joystick_center.x, "toggle colocado a la derecha")
+	var touch := InputEventScreenTouch.new()
+	touch.index = 5
+	touch.pressed = true
+	touch.position = tc.joystick_center + Vector2(30, 0)
+	tc._input(touch)
+	_check(tc.joystick_active and tc.joystick_touch_id == 5, "touch inicia el joystick")
+	_check(InputManager.virtual_move.x > 0.0, "knob actualiza virtual_move")
+	var drag := InputEventScreenDrag.new()
+	drag.index = 5
+	drag.position = tc.joystick_center + Vector2(60, 0)
+	tc._input(drag)
+	_check(abs(InputManager.virtual_move.x - 1.0) < 0.01, "drag al borde satura virtual_move")
+	var up := InputEventScreenTouch.new()
+	up.index = 5
+	up.pressed = false
+	up.position = Vector2(2000, 2000)
+	tc._input(up)
+	_check(not tc.joystick_active and InputManager.virtual_move == Vector2.ZERO, "release por índice suelta el joystick fuera del radio")
+	_check(tc.knob_offset == Vector2.ZERO, "release devuelve el knob al centro")
+	InputManager.virtual_move = Vector2.ZERO
+	tc._toggle_control_mode()
+	_check(InputManager.control_mode == InputManager.ControlMode.TILT, "toggle pasa a acelerómetro (control_mode)")
+	_check(tc.joystick_visible == (not InputManager.is_tilt_mode()), "joystick oculto solo en modo acelerómetro real")
+	InputManager.set_control_mode(InputManager.ControlMode.TOUCH)
+	_check(InputManager.control_mode == InputManager.ControlMode.TOUCH, "toggle vuelve a mando (control_mode)")
+	_check(tc.joystick_visible, "en modo mando se muestra el joystick")
+	tc.free()
+	_restore_save(backup)
+	InputManager.control_mode = SaveData.get_setting("control_mode", InputManager.ControlMode.TOUCH)
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():

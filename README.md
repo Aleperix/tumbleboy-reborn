@@ -34,11 +34,23 @@ sistema de **packs de la comunidad** descargables desde el propio juego.
 
 Controles unificados (ver [docs/API.md](docs/API.md#inputmanager)):
 
-| Acción | Teclado | Gamepad / TV |
-|--------|---------|--------------|
-| Mover | Flechas / WASD | D-pad / palanca |
-| Confirmar | Enter / Espacio | A / Start |
-| Atrás | ESC / Retroceso | B / Back |
+| Acción | Teclado | Gamepad / TV | Móvil |
+|--------|---------|--------------|-------|
+| Mover | Flechas / WASD | D-pad / palanca | Mando (joystick) / Acelerómetro |
+| Confirmar | Enter / Espacio | A / Start | Toque directo |
+| Atrás | ESC / Retroceso | B / Back | Back del sistema |
+| Foco UI (editor) | F2 | Y | — |
+
+- **Back coherente**: en el menú principal Back/B/ESC cierra el juego; en los
+  submenús (historia, packs, editor, créditos) vuelve a la pantalla anterior.
+- **Controles móviles**: joystick a la izquierda y un botón a la derecha del
+  mismo tamaño que alterna **Mando** ↔ **Acelerómetro**; la elección se guarda
+  (`SaveData.settings.control_mode`). Para probarlos en escritorio:
+  `godot3 --path . -- --force-touch`.
+- **Foco D-pad**: todos los menús y hubs navegan con flechas/D-pad, los scrolls
+  siguen al foco y los botones deshabilitados se saltan. En el editor el D-pad
+  pinta; al llegar al tope de las celdas el foco salta a los botones (y a la
+  inversa), y con **F2/Y** activas el modo foco UI explícito.
 
 ## Estructura del proyecto
 

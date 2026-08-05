@@ -94,6 +94,12 @@ var _grew := false
 var _draft_dirty := false
 var _draft_timer := 0.0
 
+var ui_mode := false
+var _last_ui_control: Control = null
+var ui_controls: Array = []
+var ui_fields: Array = []
+var toolbar_controls: Array = []
+
 var undo_stack: Array = []
 var redo_stack: Array = []
 
@@ -152,6 +158,7 @@ func _build_ui():
 	name_edit.connect("text_entered", self, "_on_name_entered")
 	name_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(name_edit)
+	ui_fields.append(name_edit)
 
 	author_edit = LineEdit.new()
 	author_edit.rect_position = Vector2(156, 40)
@@ -160,6 +167,7 @@ func _build_ui():
 	author_edit.add_font_override("font", UIFonts.make_font(14))
 	author_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(author_edit)
+	ui_fields.append(author_edit)
 
 	var theme_label := Label.new()
 	theme_label.text = "Tema"
@@ -176,6 +184,7 @@ func _build_ui():
 	theme_option.select(0)
 	theme_option.connect("item_selected", self, "_on_theme_selected")
 	add_child(theme_option)
+	ui_fields.append(theme_option)
 
 	var boy_label := Label.new()
 	boy_label.text = "Niño"
@@ -192,6 +201,7 @@ func _build_ui():
 	boy_option.select(0)
 	boy_option.connect("item_selected", self, "_on_boy_selected")
 	add_child(boy_option)
+	ui_fields.append(boy_option)
 
 	status_label = Label.new()
 	status_label.rect_position = Vector2(736, 42)
@@ -207,6 +217,7 @@ func _build_ui():
 	desc_edit.add_font_override("font", UIFonts.make_font(14))
 	desc_edit.connect("text_changed", self, "_on_field_changed")
 	add_child(desc_edit)
+	ui_fields.append(desc_edit)
 
 	file_label = Label.new()
 	file_label.rect_position = Vector2(380, 66)
@@ -242,10 +253,11 @@ func _build_ui():
 		btn.connect("pressed", self, "_on_palette_pressed", [btn, block])
 		hbox.add_child(btn)
 		paint_buttons.append([btn, block])
+		ui_controls.append(btn)
 	_select_paint(C.BLOCK_FLOOR)
 
 	hint_label = Label.new()
-	hint_label.text = "clic izq pintar · clic der borrar · arrastrar dibuja · flechas/D-pad mover · A/Enter pintar · 1-9 o Q/E bloque · G guardar · O abrir · N nuevo · T probar · F1 ayuda"
+	hint_label.text = "clic izq pintar · clic der borrar · arrastrar dibuja · flechas/D-pad mover · A/Enter pintar · 1-9 o Q/E bloque · G guardar · O abrir · N nuevo · T probar · F1 ayuda · F2/Y foco UI"
 	hint_label.rect_position = Vector2(10, 825 - 22)
 	hint_label.rect_size = Vector2(1180, 18)
 	hint_label.add_font_override("font", UIFonts.make_font(13))
@@ -263,6 +275,62 @@ func _build_ui():
 	_build_pack_panel()
 	_build_export_panel()
 	_sync_file_label()
+	_wire_focus_rows()
+
+# Conecta los vecinos de foco entre los controles de cada fila (toolbar arriba,
+# campos en las filas 2ª/3ª y paleta abajo) y entre filas adyacentes. Con
+# rect_posiciones manuales bajo un Node2D la búsqueda automática de Godot no
+# siempre encuentra vecino; fijar los focus_neighbour_* garantiza que el D-pad
+# recorra cada fila en modo foco UI y salte entre ellas. Las filas se asignan
+# explícitamente porque la paleta vive dentro de su ScrollContainer y su
+# rect_position es relativa al HBox (y=0), mientras toolbar/campos son hijos
+# directos con y absoluta.
+func _wire_focus_rows():
+	var toolbar: Array = []
+	for c in toolbar_controls:
+		if is_instance_valid(c):
+			toolbar.append(c)
+	var fields2 := []
+	var fields3 := []
+	for f in ui_fields:
+		if not is_instance_valid(f):
+			continue
+		if int(f.rect_position.y) <= 50:
+			fields2.append(f)
+		else:
+			fields3.append(f)
+	var palette: Array = []
+	for c in ui_controls:
+		if is_instance_valid(c) and not toolbar_controls.has(c):
+			palette.append(c)
+	var rows := [toolbar, fields2, fields3, palette]
+	for row in rows:
+		row.sort_custom(self, "_focus_sort_x")
+		for i in range(row.size()):
+			var c: Control = row[i]
+			if i > 0:
+				c.focus_neighbour_left = row[i - 1].get_path()
+			if i < row.size() - 1:
+				c.focus_neighbour_right = row[i + 1].get_path()
+	for i in range(rows.size() - 1):
+		if rows[i].size() > 0 and rows[i + 1].size() > 0:
+			_wire_vertical(rows[i], rows[i + 1])
+
+func _focus_sort_x(a: Control, b: Control) -> bool:
+	return a.rect_position.x < b.rect_position.x
+
+func _wire_vertical(upper: Array, lower: Array):
+	for c in lower:
+		c.focus_neighbour_top = _nearest_focus(upper, c).get_path()
+	for c in upper:
+		c.focus_neighbour_bottom = _nearest_focus(lower, c).get_path()
+
+func _nearest_focus(row: Array, c: Control) -> Control:
+	var best: Control = row[0]
+	for other in row:
+		if abs(other.rect_position.x - c.rect_position.x) < abs(best.rect_position.x - c.rect_position.x):
+			best = other
+	return best
 
 func _build_help():
 	help_panel = Control.new()
@@ -330,6 +398,8 @@ func _build_help():
 		["  A pintar", false],
 		["  L1/R1: cambiar bloque", false],
 		["  B / ESC: volver", false],
+		["  En el borde del tablero: arriba/abajo salta a botones", false],
+		["  En los botones: arriba/abajo vuelve al tablero", false],
 		["TOUCH", true],
 		["  tap pintar", false],
 		["  arrastrar dibuja", false],
@@ -518,7 +588,7 @@ func _build_pack_panel():
 	pack_panel.add_child(ok)
 
 	var cancel := Button.new()
-	cancel.text = "Cancelar  (B)"
+	cancel.text = "Cancelar"
 	cancel.rect_position = Vector2(740, 700)
 	cancel.rect_size = Vector2(160, 36)
 	cancel.add_font_override("font", UIFonts.make_font(15))
@@ -585,7 +655,7 @@ func _build_export_panel():
 	panel.add_child(ok)
 
 	var cancel := Button.new()
-	cancel.text = "Cancelar  (B)"
+	cancel.text = "Cancelar"
 	cancel.rect_position = Vector2(620, 510)
 	cancel.rect_size = Vector2(160, 36)
 	cancel.add_font_override("font", UIFonts.make_font(15))
@@ -619,6 +689,8 @@ func _make_tool_button(text: String, method: String, width: float) -> Button:
 	btn.add_font_override("font", UIFonts.make_font(14))
 	btn.connect("pressed", self, method)
 	add_child(btn)
+	ui_controls.append(btn)
+	toolbar_controls.append(btn)
 	return btn
 
 func _on_name_entered(_text: String):
@@ -981,6 +1053,17 @@ func _process(delta):
 		if InputManager.back_just_pressed():
 			_toggle_help()
 		return
+	if ui_mode:
+		if InputManager.ui_toggle_just_pressed() or InputManager.back_just_pressed():
+			_toggle_ui_mode()
+			return
+		var fo: Control = _focus_owner()
+		if fo != null:
+			_last_ui_control = fo
+		return
+	if InputManager.ui_toggle_just_pressed():
+		_toggle_ui_mode()
+		return
 	if InputManager.back_just_pressed():
 		_on_exit()
 		return
@@ -1007,6 +1090,73 @@ func _process_play(delta):
 func _is_typing() -> bool:
 	return (name_edit != null and name_edit.has_focus()) or (author_edit != null and author_edit.has_focus()) or (desc_edit != null and desc_edit.has_focus()) or (theme_option != null and theme_option.has_focus()) or (boy_option != null and boy_option.has_focus())
 
+func _focus_owner() -> Control:
+	if play_button != null:
+		return play_button.get_focus_owner()
+	if hint_label != null:
+		return hint_label.get_focus_owner()
+	return null
+
+func _release_focus():
+	var fo := _focus_owner()
+	if fo != null:
+		fo.release_focus()
+
+func _toggle_ui_mode():
+	if ui_mode:
+		_exit_ui_focus()
+	else:
+		_enter_ui_focus(null)
+
+func _enter_ui_focus(target: Control):
+	_set_ui_focus_mode(Control.FOCUS_ALL)
+	ui_mode = true
+	var t: Control = target
+	if t == null or not is_instance_valid(t) or not t.is_inside_tree():
+		t = _last_ui_control
+	if t == null or not is_instance_valid(t) or not t.is_inside_tree():
+		t = play_button
+	if t != null:
+		t.grab_focus()
+	cursor_accum = Vector2.ZERO
+	_set_status("Foco UI: D-pad navega · A activa · B vuelve al plano")
+
+func _exit_ui_focus():
+	var fo: Control = _focus_owner()
+	if fo != null:
+		fo.release_focus()
+	_set_ui_focus_mode(Control.FOCUS_NONE)
+	ui_mode = false
+	cursor_accum = Vector2.ZERO
+	_set_status("")
+
+# Transición automática celda ↔ botones: al llegar al tope del tablero (arriba)
+# salta a la toolbar, al borde inferior a la paleta; se llama desde _move_cursor
+# con la celda anterior para no dispararse desde el medio del grid.
+func _try_ui_edge(step: Vector2, prev: Vector2) -> bool:
+	if ui_mode or play_mode or dialog_open or help_visible:
+		return false
+	if step.y < 0 and prev.y <= 0:
+		_enter_ui_focus(ui_controls[0] if ui_controls.size() > 0 else null)
+		return true
+	if step.y > 0 and prev.y >= _visible_max_cell().y:
+		_enter_ui_focus(_selected_paint_button())
+		return true
+	return false
+
+func _selected_paint_button() -> Control:
+	for entry in paint_buttons:
+		if entry[1] == selected_block:
+			return entry[0]
+	if paint_buttons.size() > 0:
+		return paint_buttons[0][0]
+	return null
+
+func _set_ui_focus_mode(mode: int):
+	for c in ui_controls:
+		if is_instance_valid(c):
+			c.focus_mode = mode
+
 func _move_cursor(delta):
 	if board.width <= 0 or board.height <= 0:
 		cursor_accum = Vector2.ZERO
@@ -1014,7 +1164,7 @@ func _move_cursor(delta):
 	if _is_typing():
 		cursor_accum = Vector2.ZERO
 		return
-	var move := InputManager.get_move_vector()
+	var move := InputManager.get_hardware_move_vector()
 	if move == Vector2.ZERO:
 		cursor_accum = Vector2.ZERO
 		return
@@ -1022,10 +1172,13 @@ func _move_cursor(delta):
 	var step := Vector2(int(cursor_accum.x), int(cursor_accum.y))
 	if step != Vector2.ZERO:
 		cursor_accum -= step
+		var prev := cursor_cell
 		cursor_cell += step
 		var max_cell := _visible_max_cell()
 		cursor_cell.x = clamp(cursor_cell.x, 0, max_cell.x)
 		cursor_cell.y = clamp(cursor_cell.y, 0, max_cell.y)
+		if _try_ui_edge(step, prev):
+			return
 
 func _visible_max_cell() -> Vector2:
 	var draw := _draw_area()
@@ -1060,6 +1213,8 @@ func _unhandled_input(ev):
 	if help_visible:
 		if ev is InputEventKey and ev.pressed and not ev.echo and ev.scancode == KEY_F1:
 			_toggle_help()
+		return
+	if ui_mode:
 		return
 	if ev is InputEventKey and ev.pressed and not ev.echo:
 		_handle_key(ev)
@@ -1390,6 +1545,7 @@ func _on_auto_thumb():
 
 func _on_close_pack():
 	pack_panel.visible = false
+	_release_focus()
 	_set_status("")
 
 func _refresh_pack_available():
@@ -1507,6 +1663,7 @@ func _on_create_pack():
 	else:
 		_set_status("ERROR al crear el pack")
 	pack_panel.visible = false
+	_release_focus()
 
 func _read_text_file(path: String) -> String:
 	var f := File.new()
@@ -1524,10 +1681,12 @@ func _on_open_export():
 	for p in export_packs:
 		export_list.add_item(p.get("name", "?") + "  —  " + p.get("author", ""))
 	export_panel.visible = true
+	export_list.grab_focus()
 	_set_status("")
 
 func _on_close_export():
 	export_panel.visible = false
+	_release_focus()
 	_set_status("")
 
 func _on_export_selected():
