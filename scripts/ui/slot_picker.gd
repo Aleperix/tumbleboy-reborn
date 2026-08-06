@@ -229,9 +229,8 @@ func _on_no_save():
 func _on_back():
 	get_tree().change_scene("res://scenes/StoryHub.tscn" if game_mode == "story" else "res://scenes/PacksCommunity.tscn")
 
-func _input(ev):
-	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
-		if InputManager.back_just_pressed():
-			if FocusNav.popup_open(self):
-				return
-			_on_back()
+func _process(_delta):
+	if InputManager.back_just_pressed():
+		if FocusNav.popup_open(self):
+			return
+		_on_back()

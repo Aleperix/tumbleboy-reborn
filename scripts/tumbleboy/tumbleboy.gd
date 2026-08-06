@@ -50,6 +50,9 @@ func _ready():
 		add_child(TouchControlsScene.instance())
 
 func _process(delta: float):
+	if InputManager.back_just_pressed():
+		_go_to_menu()
+		return
 	match state:
 		State.MENU:
 			anim_timer += delta
@@ -75,21 +78,14 @@ func _process(delta: float):
 
 func _unhandled_input(ev):
 	if state == State.MENU:
-		if InputManager.back_just_pressed():
-			_go_to_menu()
-		elif ev is InputEventKey and ev.pressed and not ev.echo:
+		if ev is InputEventKey and ev.pressed and not ev.echo and not InputManager.is_back_key(ev.scancode):
 			_start_playing()
 		elif ev is InputEventMouseButton and ev.pressed:
 			_start_playing()
 		elif ev is InputEventScreenTouch and ev.pressed:
 			_start_playing()
-	elif state == State.PLAYING:
-		if InputManager.back_just_pressed():
-			_go_to_menu()
 	elif state == State.WIN_GAME:
-		if InputManager.back_just_pressed():
-			_go_to_menu()
-		elif (ev is InputEventKey and ev.pressed and not ev.echo) or (ev is InputEventMouseButton and ev.pressed):
+		if (ev is InputEventKey and ev.pressed and not ev.echo and not InputManager.is_back_key(ev.scancode)) or (ev is InputEventMouseButton and ev.pressed):
 			_go_to_menu()
 
 func _go_to_menu():

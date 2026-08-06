@@ -304,6 +304,37 @@ Con eso, toda la lógica existente (`back_just_pressed()` en menú, hubs, editor
 packs y partida) funciona igual en Android: el back cierra la app solo en el
 menú principal y navega hacia atrás en submenús/partidas/editor.
 
+### Botón Atrás en Android TV y controles remotos (v1.1.4)
+
+El fix de v1.1.2 hizo que el Atrás ya no cerrara la app, pero **en Android TV
+los submenús no respondían**: el remoto emite `AKEYCODE_BACK`, que el sistema
+consume como `NOTIFICATION_WM_GO_BACK_REQUEST` (nunca llega como evento de
+teclado/gamepad), y las escenas leían el back en `_input()`/`_unhandled_input()`,
+que solo se disparan con **eventos reales**. Resultado: nada detectaba el Atrás
+salvo el editor, que ya sondeaba en `_process`.
+
+Causa y solución (v1.1.4) — mover el sondeo del back al `_process`:
+
+- `InputManager._notification()` traduce `GO_BACK` a `Input.action_press("back")`,
+  que marca `is_action_just_pressed()` **durante ese frame**. Leerlo desde
+  `_process` (que corre todos los frames, haya o no evento) garantiza que el
+  GO_BACK se detecte, igual que ya hacía el editor.
+- Las 6 escenas de menú (`main_menu`, `story_hub`, `editor_hub`,
+  `packs_community`, `slot_picker`, `credits`) pasaron de `_input()` a
+  `_process()` con el mismo cuerpo (chequeo de popups/paneles y `_on_back()`).
+- `tumbleboy.gd` mueve el back de `_unhandled_input` a `_process`; en los
+  branches de "cualquier tecla" de `_unhandled_input` se excluyen las teclas de
+  back con el nuevo helper `InputManager.is_back_key(scancode)` (ESC / KEY_BACK)
+  para que un ESC no dispare a la vez el back y la acción de la rama.
+- **Menú principal**: doble-pulso para salir — el primer Atrás muestra
+  "Pulsá Atrás otra vez para salir" (aviso + ventana de 2 s); el segundo dentro
+  de la ventana cierra la app. Evita salir de la app por un Atrás accidental.
+
+> En el emulador o con teclado conectado, ESC y la tecla de back del teclado
+> (media-back) generan `InputEventKey` real y funcionan igual; el caso cubierto
+> aquí es el Atrás del sistema (teléfono y remote de TV), que solo llega como
+> GO_BACK.
+
 ## Controles
 
 | Acción | Teléfono | TV/control |

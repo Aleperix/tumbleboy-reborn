@@ -552,14 +552,13 @@ func _on_dialog_closed():
 	elif descargados_panel.visible:
 		_panel_grabber().start(get_tree(), desc_vbox, desc_back)
 
-func _input(ev):
-	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
-		if InputManager.back_just_pressed():
-			if FocusNav.popup_open(self):
-				return
-			if online_panel.visible:
-				_on_close_online()
-			elif descargados_panel.visible:
-				_on_close_descargados()
-			else:
-				_on_back()
+func _process(_delta):
+	if InputManager.back_just_pressed():
+		if FocusNav.popup_open(self):
+			return
+		if online_panel.visible:
+			_on_close_online()
+		elif descargados_panel.visible:
+			_on_close_descargados()
+		else:
+			_on_back()

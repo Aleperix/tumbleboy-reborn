@@ -130,6 +130,11 @@ func confirm_just_pressed() -> bool:
 func back_just_pressed() -> bool:
 	return Input.is_action_just_pressed("back") or Input.is_action_just_pressed("ui_cancel")
 
+# Teclas que el InputMap trata como Atrás (ESC / BACK de Android). Sirve para que
+# ramas de "cualquier tecla" de un _unhandled_input no disparen a la vez que el back.
+func is_back_key(scancode: int) -> bool:
+	return scancode == KEY_ESCAPE or scancode == KEY_BACK
+
 func ui_toggle_just_pressed() -> bool:
 	return Input.is_action_just_pressed("ui_toggle")
 

@@ -13,9 +13,11 @@ const MENU_ITEMS := [
 
 var buttons: Array = []
 
+var _quit_confirm_timer := -1.0
+var _quit_confirm_label: Label
+
 func _ready():
 	_build_ui()
-	set_process_input(true)
 
 func _build_ui():
 	var bg := ColorRect.new()
@@ -75,7 +77,7 @@ func _build_ui():
 		buttons.append(btn)
 
 	var hint := Label.new()
-	hint.text = "D-pad / Flechas: mover · A / Enter: entrar · B / ESC: salir"
+	hint.text = "D-pad / Flechas: mover · A / Enter: entrar · B / ESC dos veces: salir"
 	hint.add_font_override("font", UIFonts.make_font(14))
 	hint.add_color_override("font_color", Color(0.65, 0.62, 0.72))
 	hint.align = Label.ALIGN_CENTER
@@ -89,6 +91,23 @@ func _build_ui():
 	hint.add_stylebox_override("normal", hint_sb)
 	col.add_child(hint)
 
+	var quit_label := Label.new()
+	quit_label.text = ""
+	quit_label.add_font_override("font", UIFonts.make_font(14))
+	quit_label.add_color_override("font_color", Color(0.95, 0.75, 0.6))
+	quit_label.align = Label.ALIGN_CENTER
+	var quit_sb := StyleBoxFlat.new()
+	quit_sb.bg_color = Color(0.35, 0.1, 0.1, 0.55)
+	quit_sb.set_corner_radius_all(4)
+	quit_sb.content_margin_left = 8
+	quit_sb.content_margin_top = 8
+	quit_sb.content_margin_right = 8
+	quit_sb.content_margin_bottom = 8
+	quit_label.add_stylebox_override("normal", quit_sb)
+	quit_label.visible = false
+	col.add_child(quit_label)
+	_quit_confirm_label = quit_label
+
 	if buttons.size() > 0:
 		buttons[0].grab_focus()
 
@@ -98,7 +117,17 @@ func _on_item_pressed(item: Dictionary):
 	else:
 		get_tree().change_scene(item["scene"])
 
-func _input(ev):
-	if (ev is InputEventKey or ev is InputEventJoypadButton) and ev.pressed and not ev.echo:
-		if InputManager.back_just_pressed():
-			get_tree().quit()
+func _process(delta):
+	if _quit_confirm_timer > 0.0:
+		_quit_confirm_timer -= delta
+		if _quit_confirm_timer <= 0.0:
+			_quit_confirm_timer = -1.0
+			_quit_confirm_label.visible = false
+	if not InputManager.back_just_pressed():
+		return
+	if _quit_confirm_timer > 0.0:
+		get_tree().quit()
+		return
+	_quit_confirm_timer = 2.0
+	_quit_confirm_label.text = "Pulsá Atrás otra vez para salir"
+	_quit_confirm_label.visible = true

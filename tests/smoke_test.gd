@@ -483,7 +483,8 @@ func _test_main_menu():
 	_check(texts.has("Editor de niveles"), "botón Editor de niveles presente")
 	_check(texts.has("Créditos"), "botón Créditos presente")
 	_check(texts.has("Salir"), "botón Salir presente")
-	_check(texts.size() == 8, "8 textos: título+subtítulo+5 botones+hint (got %d)" % texts.size())
+	_check(texts.size() == 9, "9 textos: título+subtítulo+5 botones+hint+aviso salir (got %d)" % texts.size())
+	_check(mm._quit_confirm_label != null and not mm._quit_confirm_label.visible, "aviso de confirmación de salida oculto al inicio")
 	_check(ProjectSettings.get_setting("application/config/name") == "TumbleBoy Reborn", "nombre del proyecto = TumbleBoy Reborn")
 	mm.free()
 
@@ -923,6 +924,9 @@ func _test_android_back():
 	_check(InputManager.back_just_pressed(), "GO_BACK genera back_just_pressed")
 	get_tree().notification(MainLoop.NOTIFICATION_WM_GO_BACK_REQUEST)
 	_check(InputManager.back_just_pressed(), "un segundo GO_BACK también genera back_just_pressed")
+	_check(InputManager.is_back_key(KEY_ESCAPE), "ESC es tecla de back")
+	_check(InputManager.is_back_key(KEY_BACK), "KEY_BACK es tecla de back")
+	_check(not InputManager.is_back_key(KEY_ENTER), "ENTER no es tecla de back")
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():
