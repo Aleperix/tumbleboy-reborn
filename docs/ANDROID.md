@@ -33,8 +33,30 @@
   adicionales; la red la usa el juego para descargar packs).
 - Keystore: `keystore.jks` + contraseñas en el preset (no subir al repo).
 
-> Este repositorio no incluye `export_presets.cfg` (contiene rutas y credenciales
-> locales). Créalo en el editor: `Proyecto > Exportar > Añadir… > Android`.
+### Export presets reproducibles (sin secretos en git)
+
+`export_presets.cfg` está en `.gitignore`: contiene la contraseña del keystore
+de release y no se sube a GitHub. Para reconstruirlo en cualquier máquina:
+
+1. El repo versiona el template `tools/export_presets.example.cfg` (los mismos
+   4 presets con placeholders) y el generador `tools/setup_export_presets.py`.
+2. Regenerar con los secretos (env vars o flags; los flags anulan el env):
+
+   ```
+   export TB_KEYSTORE_PATH=~/.android/tumbleboy-release.keystore
+   export TB_KEYSTORE_USER=tumbleboy
+   export TB_KEYSTORE_PASS='<contraseña del keystore>'
+   python3 tools/setup_export_presets.py
+   ```
+
+3. El script sustituye los placeholders, escribe `export_presets.cfg` con
+   permisos `0600`, y aborta si faltan `TB_KEYSTORE_USER`/`TB_KEYSTORE_PASS` o
+   si queda algún placeholder sin resolver.
+4. La **versión** (versionCode/versionName) vive por defecto en el script
+   (`DEFAULTS`), de modo que el bump es un cambio de git visible: editar
+   `VERSION_CODE` / `VERSION_NAME` en `tools/setup_export_presets.py` y volver a
+   ejecutarlo. También se puede pasar por env (`TB_VERSION_CODE`/`TB_VERSION_NAME`)
+   o flags `--version-code` / `--version-name`.
 
 ## Exportar
 
@@ -199,8 +221,10 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
 
 ## Release — checklist completa
 
-1. **Bump de versión** en `export_presets.cfg` (los 4 presets, gitignoreado):
-   `version/code` (+1) y `version/name` a la nueva.
+1. **Bump de versión**: editar `VERSION_CODE` / `VERSION_NAME` en
+   `tools/setup_export_presets.py` y regenerar el preset
+   (`python3 tools/setup_export_presets.py`, con `TB_KEYSTORE_USER` /
+   `TB_KEYSTORE_PASS` o flags). El cambio de versión queda trackeado en git.
 2. **Debug en Waydroid** (verificación):
    ```
    godot3 --path . --export-debug "Android" build/tumbleboy-reborn-debug.apk
