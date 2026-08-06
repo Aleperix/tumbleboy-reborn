@@ -6,8 +6,12 @@
   - AUR: `paru -S godot3-bin godot3-export-templates` (necesita `sudo`).
   - Sin sudo: extraer `godot3-bin` y ejecutar el binario directo (ver abajo).
 - **JDK 17** (por ejemplo `openjdk-17-jdk`).
-- **Android SDK** con platform android-30/31 y build-tools recientes.
-- **Android NDK** `r23c` (el soportado por Godot 3.6 para armar las librerías nativas).
+- **Android SDK** con platform android-34/35/36 y build-tools 35.0.0.
+- **Android NDK** `28.2.13676358` (el configurado en `android/build/config.gradle`;
+  la 28.1 que trae el template de Godot 3.6 no está instalada en este equipo).
+- Build template custom: `android/build/` con **gradle 8.11.1** y **AGP 8.6.1**
+  (generado por "Install Build Template" del editor; solo se versiona el
+  `AndroidManifest.xml`).
 - Un **keystore** propio para firmar.
 
 ## minSdk / objetivo
@@ -15,10 +19,18 @@
 | Parámetro | Valor | Nota |
 |-----------|-------|------|
 | minSdk | **21** | Android 5.0; es el mínimo nativo de Godot 3.6 y cumple el requisito API 21 |
-| targetSdk | 30–31 | Compatible con Play y TV |
+| compileSdk | **35** | Android 15; el máx. limpio para el AGP 8.6.1 del template |
+| targetSdk | **35** | Android 15; sin aviso "creada para otra versión de Android" en Android ≤ 15 |
 | ABI | `arm64-v8a`, `armeabi-v7a`, `x86` | Cobertura máxima de cajas y teléfonos |
 | Orientación | Landscape | El juego original es apaisado |
 | Package | `com.aleperix.tumbleboyreborn` | Identidad de la app |
+
+> **Sobre el aviso "la app se creó para otra versión de Android"**: aparece
+> cuando `targetSdk` < versión del SO del dispositivo. Con targetSdk 35 no
+> aparece en Android ≤ 15. En **Android 16+** (API 36) sí puede seguir saliendo,
+> porque el template de Godot 3.6 no sube a targetSdk 36 (AGP 8.6.1). Para los
+> dispositivos modernos el plan es el port **Godot 4** (targetSdk 36); Godot 3
+> queda como versión retro (GLES2) para cajas viejas (ver `docs/03` del kit gx).
 
 > Por qué no Godot 4: Godot 4.x exige **OpenGL ES 3.0** en Android. Las cajas
 > genéricas RK3128 (Mali-400MP2) y RK3328 (Mali-450MP2) solo soportan **OpenGL ES
@@ -28,7 +40,7 @@
 ## Configuración del proyecto (`export_presets.cfg`)
 
 - Preset **Android** (Gradle build), package `com.aleperix.tumbleboyreborn`.
-- Version code/name, min_sdk 21, target_sdk 30.
+- Version code/name, min_sdk 21, target_sdk 35.
 - Permisos: **no** requiere permisos especiales (sin internet/almacenamiento
   adicionales; la red la usa el juego para descargar packs).
 - Keystore: `keystore.jks` + contraseñas en el preset (no subir al repo).
