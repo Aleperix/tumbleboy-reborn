@@ -177,6 +177,7 @@ func _test_scene():
 	for i in range(30):
 		tb._process(1.0 / 60.0)
 	_check(tb.ball.position.x >= 0.0, "física estable tras 30 frames (x=%.3f)" % tb.ball.position.x)
+	tb.free()
 
 func _test_editor():
 	print("== editor ==")
@@ -927,6 +928,8 @@ func _test_android_back():
 	_check(InputManager.is_back_key(KEY_ESCAPE), "ESC es tecla de back")
 	_check(InputManager.is_back_key(KEY_BACK), "KEY_BACK es tecla de back")
 	_check(not InputManager.is_back_key(KEY_ENTER), "ENTER no es tecla de back")
+	InputManager.release_action("back")
+	InputManager.release_action("ui_cancel")
 
 func _find_text(root: Node, needle: String) -> bool:
 	for ch in root.get_children():
