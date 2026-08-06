@@ -1,5 +1,28 @@
 [
   {
+    "tag_name": "v1.1.5",
+    "name": "v1.1.5 — targetSdk 35 (sin aviso en Android ≤15)",
+    "published_at": "2026-08-06T21:47:09Z",
+    "body": "# TumbleBoy Reborn v1.1.5\n\n## Cambios\n\n- **targetSdk subido a 35** (Android 15): ya no aparece el aviso \"la app se\n  creó para otra versión de Android\" en dispositivos con Android 15 o\n  inferior.\n- Smoke test más robusto (los tests liberan la escena y las acciones de\n  input; evita cuelgues en headless).\n- Documentación de build/export actualizada a la realidad del proyecto\n  (compileSdk/targetSdk 35, AGP 8.6.1, gradle 8.11.1, NDK 28.2) + AGENTS.md\n  como guía operativa del repo.\n\n## Nota sobre dispositivos modernos\n\nEn Android 16+ el aviso puede seguir apareciendo (el template de Godot 3.6\nno sube a targetSdk 36). Para eso existe el plan del port a **Godot 4**\n(targetSdk 36) en desarrollo; esta versión Godot 3 queda como versión retro\npara las cajas GLES2 (RK3128/RK3328) y teléfonos viejos.\n\n## Instalar\n\nElige el APK según la arquitectura de tu dispositivo:\n\n| APK | Dispositivos |\n|-----|--------------|\n| **tumbleboy-reborn-ARM64.apk** | TV-box/teléfonos modernos (arm64-v8a) |\n| **tumbleboy-reborn-ARM32.apk** | Teléfonos/TV-box viejos (armeabi-v7a) |\n| **tumbleboy-reborn-X86.apk** | Emuladores y cajas Intel (x86) |\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 19172406,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.5/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 18868077,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.5/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 19545791,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.5/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
     "tag_name": "v1.1.4",
     "name": "v1.1.4 — Botón Atrás arreglado en Android TV y controles remotos",
     "published_at": "2026-08-06T00:54:16Z",
