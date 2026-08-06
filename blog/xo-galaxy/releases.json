@@ -1,5 +1,28 @@
 [
   {
+    "tag_name": "v1.1.4",
+    "name": "v1.1.4 — Botón Atrás arreglado en Android TV y controles remotos",
+    "published_at": "2026-08-06T00:54:16Z",
+    "body": "## v1.1.4 — Botón Atrás arreglado en Android TV y controles remotos\n\n### Corrección importante\nEn Android TV (cajas S905W y similares) el Atrás del control remoto **no\nfuncionaba en submenús, hubs ni partidas**; solo el editor respondía. En Godot\n3.x el Atrás de Android no llega como evento de teclado ni de gamepad: el\nsistema solo emite `NOTIFICATION_WM_GO_BACK_REQUEST`, y las escenas lo leían en\n`_input()`/`_unhandled_input()`, que solo se disparan con **eventos reales**.\n\nAhora el Atrás se lee desde `_process()` (como ya hacía el editor), que corre\ntodos los frames haya o no evento: en teléfono y TV vuelve atrás correctamente\nen submenús, hubs, partidas y el editor.\n\n### Novedad\n- **Menú principal**: doble-pulso para salir. El primer Atrás muestra \"Pulsá\n  Atrás otra vez para salir\"; el segundo dentro de 2 segundos cierra la app.\n  Evita salir de la app por un Atrás accidental.\n\n### Detalles técnicos\n- `autoload/input_manager.gd` — nuevo helper `is_back_key(scancode)` (ESC /\n  KEY_BACK) para excluir las teclas de Atrás de las ramas de \"cualquier tecla\".\n- 6 escenas de menú (`main_menu`, `story_hub`, `editor_hub`,\n  `packs_community`, `slot_picker`, `credits`) — el back se sondea en\n  `_process()` en vez de `_input()`.\n- `scripts/tumbleboy/tumbleboy.gd` — back movido a `_process()`; las ramas de\n  teclas de `_unhandled_input` excluyen ESC/BACK.\n- `tests/smoke_test.gd` — cobertura de `is_back_key()` y del aviso de salida\n  del menú principal.\n\n### Verificación\n- Smoke test headless: checks del back y del menú principal en verde (el test\n  completo se detiene más adelante en la carga online de packs, un cuelgue\n  pre-existente ajeno a este cambio).\n- APKs firmados con el mismo keystore (SHA-256 `d804…be12`), versionCode 6 /\n  versionName 1.1.4, banner y Leanback (Android TV) intactos.\n\n### APKs\n- `tumbleboy-reborn-ARM64.apk` — teléfonos modernos (Android 8+, la mayoría).\n- `tumbleboy-reborn-ARM32.apk` — teléfonos/cajas antiguos.\n- `tumbleboy-reborn-X86.apk` — emuladores y tablets Intel.\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 19172320,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.4/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 18867987,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.4/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 19545706,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.1.4/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
     "tag_name": "v1.1.3",
     "name": "v1.1.3 — Portada del juego en el launcher de Android TV",
     "published_at": "2026-08-05T18:08:59Z",
