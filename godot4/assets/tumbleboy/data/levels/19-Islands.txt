@@ -1,0 +1,20 @@
+!!!
+
+
+ -----                  ------DDDDDDDDD
+--DDD--                  -d---DDDDDDDDD
+-DDdDD---<WWWWWWWWWWW  W1WWW--DDDDDDDDD
+-$DDDD---<WWWW    WWWW  WWWW>-DDDDDDDDDD
+--DDD---                  d---------DDDDD
+ -----             ----       ---DD-DDDDD
+                 ------       --DDD-DDDDD
+          ----  >--@DD----   ----DD-DDDDD
+       -------  >-DDDDD---   ---DD--DDDD
+      ---@D---   ---DD---     -DDD----DDDD
+     ---DDDD-     -----          D   ----
+      ---DD-                 -     v
+       ------    ------    ----DD  --
+       ----<WWWWWW>  @-< WWW>--DDD @--
+         ----              -----------
+                             -------
+!!!

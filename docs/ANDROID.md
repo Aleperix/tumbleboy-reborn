@@ -37,6 +37,78 @@
 > 1.1/2.0**, así que un APK de Godot 4 ni siquiera inicia ahí. Godot 3.6 + renderer
 > **GLES2** corre bien incluso con 1 GB de RAM.
 
+## Port a Godot 4 (`godot4/`, renderer Compatibility)
+
+El port a Godot 4.7 (renderer **Compatibility** = OpenGL ES 3.0) vive en
+`godot4/` como proyecto independiente del mismo repo, para dispositivos con
+GLES 3.0+ (teléfonos y cajas modernas). El proyecto godot3 se mantiene como
+versión retro (GLES2) para cajas ES 2.0-only.
+
+| Parámetro | Valor |
+|-----------|-------|
+| minSdk | **24** |
+| targetSdk / compileSdk | **36** |
+| ABI (release) | `arm64-v8a`, `x86_64` (presets por ABI + preset universal de debug) |
+| Orientación | Landscape |
+| Package | `com.aleperix.tumbleboyreborn` |
+| Versión | **compartida con godot3** (release conjunta): `VERSION_CODE`/`VERSION_NAME` en `godot4/tools/setup_export_presets.py` deben ser los mismos que en `tools/setup_export_presets.py` |
+
+### Export (headless)
+
+Mismo esquema de presets reproducibles que godot3, pero con sintaxis Godot 4
+(`gradle_build/*`, `architectures/*`, `permissions/*`):
+`godot4/tools/export_presets.example.cfg` + `godot4/tools/setup_export_presets.py`
+(envs `TB_KEYSTORE_*` / `TB_VERSION_*`, secretos fuera de git). El script además
+deja el template Android listo: escribe `android/.build_version` y aplica de
+forma **idempotente** los ajustes de TV al manifest y los
+`res/mipmap-*/banner.png`.
+
+```
+cd godot4
+export TB_KEYSTORE_PATH=~/.android/tumbleboy-release.keystore
+export TB_KEYSTORE_USER=tumbleboy
+export TB_KEYSTORE_PASS='<contraseña del keystore>'
+python3 tools/setup_export_presets.py
+
+# install del build template (primera vez):
+godot --headless --path . --install-android-build-template
+# o: descomprimir ~/.local/share/godot/export_templates/4.7.1.stable/android_source.zip en android/build/
+
+# debug (firma con el debug keystore) y release (firma con el keystore release):
+godot --headless --path . --export-debug   "Android"          build/tumbleboy-reborn-debug.apk
+godot --headless --path . --export-release "Android ARM64"    build/tumbleboy-reborn-ARM64.apk
+godot --headless --path . --export-release "Android X86_64"   build/tumbleboy-reborn-X86_64.apk
+```
+
+### Gotchas del port
+
+1. **`--export` ya no existe en Godot 4**: aborta con error pidiendo
+   `--export-release`/`--export-debug`/`--export-pack` (al revés que godot3).
+2. **`android/.build_version`**: el export con gradle exige ese marcador con la
+   versión `GODOT_VERSION_FULL_CONFIG` del editor (`4.7.1.stable`). Si falta →
+   "no version info for it exists"; si no coincide → "build version mismatch".
+   El setup script lo escribe; si se instala el template a mano hay que crearlo.
+3. **`show_in_android_tv=true` solo valida que uses Gradle build**; NO añade el
+   filtro `LEANBACK_LAUNCHER`. Los ajustes de TV (leanback `required="false"`,
+   `android:banner="@mipmap/banner"`, intent-filter `LEANBACK_LAUNCHER`) se hacen
+   a mano en `android/build/src/main/AndroidManifest.xml` + `res/mipmap-*/banner.png`
+   (320×180, de `assets/android/banner_320x180.png`). A diferencia de godot3, el
+   export de Godot 4 NO reescribe ese manifest (se mergea con el temporal vía
+   Gradle), así que los cambios persisten; el setup script los reaplica si se
+   reinstala el template.
+4. **JDK/SDK del export headless**: se leen de
+   `~/.config/godot/editor_settings-4.7.tres` (`export/android/java_sdk_path`,
+   `export/android/android_sdk_path`), no del preset.
+5. **Smoke test**: `cd godot4 && godot --headless --path . res://scenes/SmokeTest.tscn`
+   (debe terminar en `SMOKE TEST: ALL PASS`). Import de assets:
+   `cd godot4 && godot --headless --path . --import`.
+
+### Release conjunta v1.2.0
+
+El tag sube los APKs de **ambos** motores: 3 de godot3 (ARM64/ARM32/X86) + 2 de
+godot4 (ARM64/X86_64). Antes de exportar, ambos `setup_export_presets.py`
+(godot3 y godot4) deben llevar el mismo `VERSION_CODE`/`VERSION_NAME`.
+
 ## Configuración del proyecto (`export_presets.cfg`)
 
 - Preset **Android** (Gradle build), package `com.aleperix.tumbleboyreborn`.

@@ -31,8 +31,8 @@ OUT = os.path.join(REPO_ROOT, "export_presets.cfg")
 # La versión vive aquí: el bump de versión es editar estos defaults y regenerar.
 DEFAULTS = {
     "KEYSTORE_PATH": "~/.android/tumbleboy-release.keystore",
-    "VERSION_CODE": "7",
-    "VERSION_NAME": "1.1.5",
+    "VERSION_CODE": "8",
+    "VERSION_NAME": "1.2.0",
 }
 
 ENV = {

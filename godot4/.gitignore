@@ -1,0 +1,24 @@
+# Godot 4 — cachés generadas (se regeneran al abrir el proyecto)
+.godot/
+.import/
+*.import
+
+# Exports Android (binarios y secretos)
+/android/*
+!/android/build/
+/android/build/*
+!/android/build/src/
+/android/build/src/*
+!/android/build/src/main/
+/android/build/src/main/*
+!/android/build/src/main/AndroidManifest.xml
+*.apk
+*.aab
+*.jks
+*.keystore
+export_presets.cfg
+__pycache__/
+*.pyc
+
+# Estado local del juego en desktop
+*.sav

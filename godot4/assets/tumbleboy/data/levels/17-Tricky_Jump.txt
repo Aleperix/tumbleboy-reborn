@@ -1,0 +1,23 @@
+!!!
+DDDDDDDDDDDDD
+D%%%%%%%DDDDD
+D%-----%DDDDD
+D%-1---%DDdDD
+D%-----%%DDDD
+D%%-----%%DDD
+DD%------%%DD
+DD%-------%%D
+DD%%%------%D
+DD%%--  ---%D
+DD%      --%D
+DD%       %%D
+DD%vvvvvvv%%D
+D%%------%%DD
+D%-@----%%DDD
+D%----@%%DDDD
+D%-----%DDDDD
+D%-----%DDDDD
+D%---$-%DDDDD
+D%%%%%%%DDDDD
+DDDDDDDDDDDDD
+!!!
