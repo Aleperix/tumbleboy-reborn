@@ -40,8 +40,8 @@
   <style>
     .tbr-post{max-width:100%;font-family:var(--font-body,"Inter"),sans-serif;color:var(--ink,#e9eff6);font-size:15px;line-height:1.75}
     .tbr-post *{box-sizing:border-box}
-    .tbr-post a{color:var(--signal,#a8ff60);text-decoration:none}
-    .tbr-post a:hover{text-decoration:underline}
+    .tbr-post a{color:var(--signal,#a8ff60);text-decoration:underline;text-underline-offset:3px}
+    .tbr-post a.tbr-btn{text-decoration:none}
     .tbr-post code{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:13px;background:var(--panel-2,#0b121c);border:1px solid var(--line,#1d2a3b);border-radius:4px;padding:1px 5px}
     .tbr-post pre{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:13px;background:var(--panel-2,#0b121c);border:1px solid var(--line,#1d2a3b);border-radius:var(--radius,12px);padding:14px 16px;overflow-x:auto}
     .tbr-post h2,.tbr-post h3,.tbr-post h4{font-family:var(--font-display,"Space Mono"),monospace;line-height:1.35;margin:28px 0 10px}
@@ -61,7 +61,7 @@
     .tbr-btn{display:flex;flex-direction:column;gap:2px;padding:14px 16px;border:1px solid var(--signal,#a8ff60);border-radius:var(--radius,12px);background:rgba(168,255,96,.06);color:var(--signal,#a8ff60);text-align:center;transition:background .2s,border-color .2s}
     .tbr-btn:hover{background:rgba(168,255,96,.14);border-color:var(--signal-dim,#6fbf3e);text-decoration:none}
     .tbr-btn small{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--mute,#7c8ba0)}
-    .tbr-btn .tbr-btn-size{color:var(--mute-2,#4c5a6e)}
+    .tbr-btn .tbr-btn-size{color:var(--mute,#7c8ba0)}
     .tbr-src{margin:14px 0}
     .tbr-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:12px;color:var(--mute,#7c8ba0);margin:10px 0}
     .tbr-status button{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--ink,#e9eff6);background:var(--panel,#0f1723);border:1px solid var(--line,#1d2a3b);border-radius:6px;padding:6px 12px;cursor:pointer}
@@ -75,12 +75,12 @@
     .tbr-acc summary{cursor:pointer;list-style:none;padding:12px 16px;display:flex;align-items:baseline;gap:12px;font-family:var(--font-display,"Space Mono"),monospace;font-size:13px}
     .tbr-acc summary::-webkit-details-marker{display:none}
     .tbr-acc summary:hover{color:var(--signal,#a8ff60)}
-    .tbr-acc .tbr-acc-date{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--mute-2,#4c5a6e);margin-left:auto}
+    .tbr-acc .tbr-acc-date{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--mute,#7c8ba0);margin-left:auto}
     .tbr-acc .tbr-acc-body{padding:2px 16px 14px;font-size:14px}
-    .tbr-acc .tbr-acc-body h4{font-size:13px;margin:14px 0 6px}
+    .tbr-acc .tbr-acc-body h2,.tbr-acc .tbr-acc-body h3,.tbr-acc .tbr-acc-body h4{font-size:13px;margin:14px 0 6px;color:var(--ceibal,#ff8a3d)}
     .tbr-acc .tbr-acc-body ul{margin:4px 0}
     .tbr-acc .tbr-acc-body a{word-break:break-all}
-    .tbr-caption{margin:8px 0 4px;color:var(--mute-2,#4c5a6e);font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:12px;text-align:center}
+    .tbr-caption{margin:8px 0 4px;color:var(--mute,#7c8ba0);font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:12px;text-align:center}
     .tbr-teaser{border:1px dashed var(--ceibal,#ff8a3d);border-radius:var(--radius,12px);padding:16px 20px;margin:20px 0;background:rgba(255,138,61,.05)}
     .tbr-teaser b{color:var(--ceibal,#ff8a3d)}
     .tbr-credits{border:1px solid var(--line,#1d2a3b);border-radius:var(--radius,12px);padding:20px 24px;background:var(--panel,#0f1723);margin:20px 0}
@@ -127,23 +127,23 @@
   <div class="tbr-downloads" id="tbrDownloads">
     <a class="tbr-btn" data-arch="godot4-ARM64" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-godot4-ARM64.apk">
       <span>Godot 4 · ARM64</span>
-      <small>Teléfonos/TV-box modernos (GLES3, Android 7+)<br><span class="tbr-btn-size"></span></small>
+      <small>Dispositivos modernos<br><span class="tbr-btn-size"></span></small>
     </a>
     <a class="tbr-btn" data-arch="godot4-X86_64" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-godot4-X86_64.apk">
       <span>Godot 4 · X86_64</span>
-      <small>Emuladores y cajas Intel modernas (GLES3)<br><span class="tbr-btn-size"></span></small>
+      <small>Emuladores y tablets modernos<br><span class="tbr-btn-size"></span></small>
     </a>
     <a class="tbr-btn" data-arch="ARM64" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-ARM64.apk">
       <span>ARM64</span>
-      <small>Teléfonos y cajas (Godot 3, GLES2)<br><span class="tbr-btn-size"></span></small>
+      <small>Teléfonos modernos (Android 8+)<br><span class="tbr-btn-size"></span></small>
     </a>
     <a class="tbr-btn" data-arch="ARM32" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-ARM32.apk">
       <span>ARM32</span>
-      <small>Teléfonos y cajas antiguos (Godot 3)<br><span class="tbr-btn-size"></span></small>
+      <small>Teléfonos y cajas antiguos<br><span class="tbr-btn-size"></span></small>
     </a>
     <a class="tbr-btn" data-arch="X86" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-X86.apk">
       <span>X86</span>
-      <small>Emuladores y tablets Intel (Godot 3)<br><span class="tbr-btn-size"></span></small>
+      <small>Emuladores y tablets Intel<br><span class="tbr-btn-size"></span></small>
     </a>
   </div>
 
@@ -152,7 +152,7 @@
     <button type="button" id="tbrRefresh" title="Fuerza una comprobación en GitHub">Actualizar</button>
   </div>
 
-  <p class="tbr-src tbr-muted">¿Prefieres el código o compilarlo tú? Repo: <a href="https://github.com/Aleperix/tumbleboy-reborn">github.com/Aleperix/tumbleboy-reborn</a>. Los APKs se generan con Godot 3.6 (retro) y Godot 4 (moderno) y se firman con el mismo keystore.</p>
+  <p class="tbr-src tbr-muted">¿Prefieres el código o compilarlo tú? Repo: <a href="https://github.com/Aleperix/tumbleboy-reborn">github.com/Aleperix/tumbleboy-reborn</a>. Los APKs se generan con Godot 3.6 y Godot 4 y se firman con el mismo keystore.</p>
 
   <h2>Instalación paso a paso</h2>
   <ol>
@@ -267,27 +267,28 @@
 
     function mdToHtml(md) {
       if (!md) return "";
-      var out = [], para = [];
+      var out = [], para = [], lines = md.split(/\r?\n/), i = 0;
       var flush = function () { if (para.length) { out.push("<p>" + para.join(" ") + "</p>"); para = []; } };
-      md.split(/\r?\n/).forEach(function (line) {
-        var t = line.trim();
-        if (!t) { flush(); return; }
-        var h = /^(#{1,4})\s+(.*)$/.exec(t);
-        if (h) { flush(); out.push("<h4>" + inline(h[2]) + "</h4>"); return; }
+      while (i < lines.length) {
+        var t = lines[i].trim();
+        if (!t) { flush(); i++; continue; }
+        var h = /^(#{1,6})\s+(.*)$/.exec(t);
+        if (h) { flush(); var lvl = Math.min(6, h[1].length + 1); out.push("<h" + lvl + ">" + inline(h[2]) + "</h" + lvl + ">"); i++; continue; }
         if (t.indexOf("- ") === 0 || t.indexOf("* ") === 0) {
           flush();
           var lis = [];
-          md.split(/\r?\n/).forEach(function (l2) {
-            var tt = l2.trim();
-            if (tt.indexOf("- ") === 0 || tt.indexOf("* ") === 0) lis.push("<li>" + inline(tt.slice(2)) + "</li>");
-            else if (tt) { /* ignore stray */ }
-          });
+          while (i < lines.length) {
+            var tt = lines[i].trim();
+            if (tt.indexOf("- ") === 0 || tt.indexOf("* ") === 0) { lis.push("<li>" + inline(tt.slice(2)) + "</li>"); i++; }
+            else break;
+          }
           out.push("<ul>" + lis.join("") + "</ul>");
-          return;
+          continue;
         }
-        if (/^#{4,}/.test(t)) return;
+        if (/^#{4,}/.test(t)) { i++; continue; }
         para.push(inline(t));
-      });
+        i++;
+      }
       flush();
       return out.join("");
     }
