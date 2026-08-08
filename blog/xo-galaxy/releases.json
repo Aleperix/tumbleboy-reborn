@@ -1,5 +1,38 @@
 [
   {
+    "tag_name": "v1.2.0",
+    "name": "v1.2.0 — port a Godot 4 (targetSdk 36) + release conjunta",
+    "published_at": "2026-08-08T03:55:42Z",
+    "body": "# TumbleBoy Reborn v1.2.0\n\n## Novedades\n\n- **Port a Godot 4** (renderer Compatibility = OpenGL ES 3.0), dentro del mismo\n  repo (`godot4/`): misma jugabilidad completa — modo historia (21 niveles),\n  editor de niveles, packs de la comunidad, guardado por zócalos, controles\n  táctiles (mando/acelerómetro), navegación con D-pad para TV y el doble-pulso\n  de Atrás para salir.\n  - **targetSdk 36 / minSdk 24**: desaparece el aviso \"la app se creó para otra\n    versión de Android\" también en Android 16+.\n  - APKs **ARM64** y **X86_64** (los builds de Godot 4 no soportan\n    armeabi-v7a/x86 de 32 bits).\n  - Smoke test portado y en verde (265 checks) en headless; build Android\n    reproducible (preset generado por script, sin secretos en git).\n- **Release conjunta**: esta versión publica los dos motores en paralelo:\n  - **Godot 3.6** (GLES2, targetSdk 35) — build retro para cajas GLES 2.0-only\n    (RK3128/RK3328) y teléfonos antiguos.\n  - **Godot 4** (GLES3, targetSdk 36) — build moderno para teléfonos y\n    TV-box con OpenGL ES 3.0+.\n- Eligen tu APK según el dispositivo; misma identidad de app y mismo guardado\n  en ambos builds.\n\n## Instalar\n\n| APK | Motor / ABI | Dispositivos |\n|-----|-------------|--------------|\n| **tumbleboy-reborn-godot4-ARM64.apk** | Godot 4 — arm64-v8a | Teléfonos/TV-box modernos (GLES3) |\n| **tumbleboy-reborn-godot4-X86_64.apk** | Godot 4 — x86_64 | Cajas Intel modernas / emuladores (GLES3) |\n| **tumbleboy-reborn-ARM64.apk** | Godot 3 — arm64-v8a | Teléfonos/TV-box modernos y viejos (GLES2) |\n| **tumbleboy-reborn-ARM32.apk** | Godot 3 — armeabi-v7a | Teléfonos/TV-box viejos (GLES2) |\n| **tumbleboy-reborn-X86.apk** | Godot 3 — x86 | Emuladores y cajas Intel (GLES2) |\n\n> Duda de qué ABI tienes: en las cajas modernas (RK3588, S905X3, etc.) usa el\n> **godot4-ARM64**; si tu caja es RK3128/RK3328 (GLES 2.0-only) usa el\n> **Godot 3 ARM64**. Los emuladores suelen ser x86_64 (Godot 4) o x86 (Godot 3).\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 19172401,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.2.0/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 18868067,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.2.0/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-godot4-ARM64.apk",
+        "size": 78381187,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.2.0/tumbleboy-reborn-godot4-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-godot4-X86_64.apk",
+        "size": 81295869,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.2.0/tumbleboy-reborn-godot4-X86_64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 19545787,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.2.0/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
     "tag_name": "v1.1.5",
     "name": "v1.1.5 — targetSdk 35 (sin aviso en Android ≤15)",
     "published_at": "2026-08-06T21:47:09Z",
