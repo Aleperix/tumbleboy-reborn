@@ -91,6 +91,8 @@ conversaciones del proyecto van en **español**.
 6. **Blog (XO Galaxy)**: el post lee `releases.json` vía jsDelivr; tras
    publicar release hay que regenerar (`python3 tools/gen_releases_json.py`),
    commitear y purgar `https://purge.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/releases.json`.
+   El post se publica en Blogger con `python3 tools/blogger_publish.py --blog-id <id>`
+   (OAuth Desktop; credenciales/token fuera del repo en `~/.config/tumbleboy-reborn/`).
    Dentro de `<script>` del post **no** usar caracteres no-ASCII literales
    (`·`, `ó`): usar escapes `\u00b7`, `\u00f3` o Blogger los convierte en
    entidades que rompen el JS; la plantilla exige `//<![CDATA[`.

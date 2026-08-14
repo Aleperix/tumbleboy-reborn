@@ -360,6 +360,14 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
    ```
    jsDelivr refresca el archivo solo en ~12 h (`@main`); para forzarlo:
    `curl https://purge.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/releases.json`.
+   Para publicar el post (fuente: `blog/xo-galaxy/post.html`), los botones y el
+   changelog en Blogger se actualizan con:
+   ```
+   python3 tools/blogger_publish.py --auth       # 1a vez: autorizar (OAuth Desktop)
+   python3 tools/blogger_publish.py --blog-id <id>   # publica (actualiza) el post
+   ```
+   (las credenciales viven en `~/.config/tumbleboy-reborn/blogger_creds.json`,
+    fuera del repo; el token en `blogger_token.json`).
 
 > El post también sirve sus imágenes (portada + capturas) desde jsDelivr
 > (`blog/xo-galaxy/*.png` vía `@main`). Fuente versionada del post:
