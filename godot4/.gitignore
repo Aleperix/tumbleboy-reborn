@@ -22,3 +22,13 @@ __pycache__/
 
 # Estado local del juego en desktop
 *.sav
+
+# Builds de escritorio (binarios y zips)
+/build/
+*.exe
+*.dmg
+*.pkg
+*.app
+*.x86_64
+*.arm64
+*.zip

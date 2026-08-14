@@ -12,6 +12,7 @@ proyectos.
 | [tumbleboy-level-format.md](tumbleboy-level-format.md) | Formato de los niveles `.txt` (atributos, símbolos del mapa, ejemplo) |
 | [API.md](API.md) | Referencia técnica completa: autoloads, scripts, constantes, escenas, formatos, tests |
 | [ANDROID.md](ANDROID.md) | Cómo compilar el APK, minSdk/ABI, despliegue en caja/TV |
+| [DESKTOP.md](DESKTOP.md) | Builds de escritorio (Windows, Linux, macOS) desde el port Godot 4 |
 | [../packs/README.md](../packs/README.md) | Cómo funciona un pack, crearlos y aportarlos a la comunidad |
 
 ## El juego en una frase
@@ -39,10 +40,11 @@ MainMenu
 
 | Decisión | Valor | Motivo |
 |----------|-------|--------|
-| Motor | Godot 3.6.x (no 4.x) | 4.x exige OpenGL ES 3.0 en Android; los chips RK3128/RK3328 (Mali-400/450) solo tienen ES 2.0 |
-| Renderer | GLES2 | Requisito hardware y de RAM de 1 GB |
-| minSdk | 21 | Mínimo nativo de Godot 3.6 (Android 5.0+) |
-| ABI | arm64-v8a + armeabi-v7a + x86, landscape | Cubre cajas Android baratas y teléfonos |
+| Motor | Godot 3.6.x (raíz) + port Godot 4.7 (`godot4/`) | La raíz usa GLES2 para las cajas GLES 2.0-only (RK3128/RK3328, Mali-400/450); el port Godot 4 (Compatibility) cubre Android moderno y escritorio |
+| Renderer | GLES2 (raíz) / gl_compatibility (port) | Requisito hardware de 1 GB en cajas viejas; GL3+ en el resto |
+| minSdk | 21 (raíz) / 24 (port) | Mínimo nativo de Godot 3.6 / Godot 4 |
+| ABI | arm64-v8a + armeabi-v7a + x86 (raíz); arm64-v8a + x86_64 (port) | Cubre cajas Android baratas y teléfonos |
+| Escritorio | Windows/Linux/macOS desde el port Godot 4 (6 zips) | Templates ya instalados; ver [DESKTOP.md](DESKTOP.md) |
 | Ventana base | 1200×825 (TumbleBoy 1100×825, offset 50 px) | Resolución nativa del original escalada |
 | Entrada | InputMap unificado + D-pad + táctil | Jugar igual en teléfono y TV |
 | Niveles | Formato `.txt` fiel + editor visual | El original los crea como texto sin editor |

@@ -106,7 +106,7 @@
 
   <p>Tumble Boy es una actividad libre del ecosistema <b>Sugar Labs/OLPC</b>, nacida en un game jam para la XO en 2007 y popularizada en Uruguay con las laptops XO del Plan Ceibal. Esta versión <b>Reborn</b> lo rescata y lo amplía: <b>21 niveles originales</b> + editor de niveles visual + packs descargables, con tres zócalos de guardado para no perder nada.</p>
 
-  <p>Corre nativo en <b>Android</b> (teléfonos, tablets y <b>Android TV</b>) y en escritorio Linux, en dos builds: <b>Godot 3.6 + GLES2</b> (retro, ligero incluso en hardware humilde, para cajas GLES 2.0-only) y <b>Godot 4 + Compatibility</b> (GLES3, targetSdk 36, para dispositivos modernos).</p>
+  <p>Corre nativo en <b>Android</b> (teléfonos, tablets y <b>Android TV</b>) y en escritorio (<b>Windows</b>, <b>Linux</b> y <b>macOS</b>), en dos builds: <b>Godot 3.6 + GLES2</b> (retro, ligero incluso en hardware humilde, para cajas GLES 2.0-only) y <b>Godot 4 + Compatibility</b> (GLES3, targetSdk 36, para dispositivos modernos).</p>
 
   <!-- CAPTURA 2: Editor de niveles con bloques pintados -->
   <img src="https://cdn.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/editor.png" alt="Editor de niveles visual de TumbleBoy Reborn">
@@ -122,7 +122,7 @@
   </ul>
 
   <h2>Descargar</h2>
-  <p>Elige el APK según tu dispositivo. Los botones siempre funcionan; con conexión se actualizan solos con la información de GitHub (versión y tamaño).</p>
+  <p>Elige el APK según tu dispositivo o el ZIP para tu sistema de escritorio. Los botones siempre funcionan; con conexión se actualizan solos con la información de GitHub (versión y tamaño).</p>
 
   <div class="tbr-downloads" id="tbrDownloads">
     <a class="tbr-btn" data-arch="godot4-ARM64" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-godot4-ARM64.apk">
@@ -145,6 +145,30 @@
       <span>X86</span>
       <small>Emuladores y tablets Intel<br><span class="tbr-btn-size"></span></small>
     </a>
+    <a class="tbr-btn" data-arch="win64" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-win64.zip">
+      <span>Windows 64 bits</span>
+      <small>Windows 7 en adelante<br><span class="tbr-btn-size"></span></small>
+    </a>
+    <a class="tbr-btn" data-arch="win32" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-win32.zip">
+      <span>Windows 32 bits</span>
+      <small>PCs antiguos<br><span class="tbr-btn-size"></span></small>
+    </a>
+    <a class="tbr-btn" data-arch="linux64" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-linux64.zip">
+      <span>Linux 64 bits</span>
+      <small>x86_64<br><span class="tbr-btn-size"></span></small>
+    </a>
+    <a class="tbr-btn" data-arch="linux32" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-linux32.zip">
+      <span>Linux 32 bits</span>
+      <small>x86 antiguo<br><span class="tbr-btn-size"></span></small>
+    </a>
+    <a class="tbr-btn" data-arch="linux-arm64" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-linux-arm64.zip">
+      <span>Linux ARM64</span>
+      <small>Raspberry Pi, Chromebooks<br><span class="tbr-btn-size"></span></small>
+    </a>
+    <a class="tbr-btn" data-arch="macos" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-macos.zip">
+      <span>macOS</span>
+      <small>Intel y Apple Silicon<br><span class="tbr-btn-size"></span></small>
+    </a>
   </div>
 
   <div class="tbr-status">
@@ -152,7 +176,7 @@
     <button type="button" id="tbrRefresh" title="Fuerza una comprobación en GitHub">Actualizar</button>
   </div>
 
-  <p class="tbr-src tbr-muted">¿Prefieres el código o compilarlo tú? Repo: <a href="https://github.com/Aleperix/tumbleboy-reborn">github.com/Aleperix/tumbleboy-reborn</a>. Los APKs se generan con Godot 3.6 y Godot 4 y se firman con el mismo keystore.</p>
+  <p class="tbr-src tbr-muted">¿Prefieres el código o compilarlo tú? Repo: <a href="https://github.com/Aleperix/tumbleboy-reborn">github.com/Aleperix/tumbleboy-reborn</a>. Los APKs se generan con Godot 3.6 y Godot 4 y se firman con el mismo keystore; los builds de escritorio usan Godot 4.</p>
 
   <h2>Instalación paso a paso</h2>
   <ol>
@@ -161,6 +185,15 @@
     <li>Toca el APK descargado y pulsa <b>Instalar</b>.</li>
     <li>Para <b>Android TV</b>: copia el APK a un USB y usa un gestor de archivos, o envíalo por ADB (<code>adb install tumbleboy-reborn-ARM64.apk</code>).</li>
     <li>Si ya tenías una versión anterior, la instalación <b>actualiza</b> sin borrar tus guardados.</li>
+  </ol>
+
+  <h3>Escritorio (Windows, Linux, macOS)</h3>
+  <ol>
+    <li>Descarga el <b>ZIP</b> de tu sistema (64 bits salvo que tengas un equipo muy antiguo).</li>
+    <li>Descomprímelo en cualquier carpeta y ejecuta el archivo dentro:
+      <code>TumbleBoy Reborn.exe</code> en Windows, <code>tumbleboy-reborn-linux64</code> en Linux (dale permisos de ejecución si tu gestor de archivos no los conserva) y la <b>app</b> del ZIP en macOS.</li>
+    <li>En <b>macOS</b>, al ser una app sin firmar, la primera vez haz clic derecho sobre ella y pulsa <b>Abrir</b> en lugar de doble clic.</li>
+    <li>Los guardados y packs son compatibles entre los builds de Godot 3 y Godot 4 del mismo sistema.</li>
   </ol>
 
   <!-- CAPTURA 3: Una partida con el joystick virtual visible -->
@@ -305,7 +338,8 @@
       var links = document.querySelectorAll("#tbrDownloads .tbr-btn");
       links.forEach(function (a) {
         var arch = a.getAttribute("data-arch");
-        var name = "tumbleboy-reborn-" + arch + ".apk";
+        var ext = a.getAttribute("data-ext") || "apk";
+        var name = "tumbleboy-reborn-" + arch + "." + ext;
         var size = a.querySelector(".tbr-btn-size");
         var parts = [];
         if (releases && releases.length) {

@@ -106,7 +106,8 @@ godot --headless --path . --export-release "Android X86_64"   build/tumbleboy-re
 ### Release conjunta v1.2.0
 
 El tag sube los APKs de **ambos** motores: 3 de godot3 (ARM64/ARM32/X86) + 2 de
-godot4 (ARM64/X86_64). Antes de exportar, ambos `setup_export_presets.py`
+godot4 (ARM64/X86_64), más los 6 zips de escritorio desde el port godot4
+(ver [DESKTOP.md](DESKTOP.md)). Antes de exportar, ambos `setup_export_presets.py`
 (godot3 y godot4) deben llevar el mismo `VERSION_CODE`/`VERSION_NAME`.
 
 ## Configuración del proyecto (`export_presets.cfg`)
@@ -305,10 +306,11 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
 
 ## Release — checklist completa
 
-1. **Bump de versión**: editar `VERSION_CODE` / `VERSION_NAME` en
-   `tools/setup_export_presets.py` y regenerar el preset
-   (`python3 tools/setup_export_presets.py`, con `TB_KEYSTORE_USER` /
-   `TB_KEYSTORE_PASS` o flags). El cambio de versión queda trackeado en git.
+1. **Bump de versión**: editar `VERSION_CODE` / `VERSION_NAME` en **ambos**
+   `tools/setup_export_presets.py` (raíz y `godot4/`) y regenerar los presets
+   (`python3 tools/setup_export_presets.py` y `python3 godot4/tools/setup_export_presets.py`,
+   con `TB_KEYSTORE_USER` / `TB_KEYSTORE_PASS` o flags). El cambio de versión
+   queda trackeado en git.
 2. **Debug en Waydroid** (verificación):
    ```
    godot3 --path . --export-debug "Android" build/tumbleboy-reborn-debug.apk
@@ -319,21 +321,36 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
    godot3 --path . --export "Android ARM32" build/tumbleboy-reborn-ARM32.apk
    godot3 --path . --export "Android X86"    build/tumbleboy-reborn-X86.apk
    ```
-4. **Verificar**: `aapt dump badging` (versionCode/versionName/banner) y
-   `apksigner verify --print-certs` → SHA-256 `d804317b…b35be12`.
-5. **Publicar**:
+4. **2 APKs del port godot4** (los assets se suben con prefijo `godot4-`):
    ```
-   git add <cambios> && git commit -m "v1.1.x: ..." && git push origin main
-   git tag v1.1.x && git push origin v1.1.x
-   gh release create v1.1.x --title "v1.1.x — ..." --notes-file <notas.md> \
-     build/tumbleboy-reborn-ARM64.apk build/tumbleboy-reborn-ARM32.apk build/tumbleboy-reborn-X86.apk
+   godot --headless --path godot4 --export-release "Android ARM64"  build/tumbleboy-reborn-ARM64.apk
+   godot --headless --path godot4 --export-release "Android X86_64" build/tumbleboy-reborn-X86_64.apk
    ```
-6. **Actualizar el blog** (XO Galaxy): el post lee el changelog de
+5. **6 zips de escritorio** desde el port godot4 (ver `docs/DESKTOP.md`):
+   `win64`, `win32`, `linux64`, `linux32`, `linux-arm64`, `macos`.
+6. **Verificar**: `aapt dump badging` (versionCode/versionName/banner) y
+   `apksigner verify --print-certs` → SHA-256 `d804317b…b35be12`; en desktop,
+   smoke del binario Linux (exit 0), `file` para las demás arquitecturas y el
+   pck con los niveles.
+7. **Publicar**:
+   ```
+   git add <cambios> && git commit -m "v1.x.y: ..." && git push origin main
+   git tag v1.x.y && git push origin v1.x.y
+   gh release create v1.x.y --title "v1.x.y — ..." --notes-file <notas.md> \
+     build/tumbleboy-reborn-ARM64.apk build/tumbleboy-reborn-ARM32.apk build/tumbleboy-reborn-X86.apk \
+     godot4/build/tumbleboy-reborn-godot4-ARM64.apk godot4/build/tumbleboy-reborn-godot4-X86_64.apk \
+     godot4/build/tumbleboy-reborn-win64.zip godot4/build/tumbleboy-reborn-win32.zip \
+     godot4/build/tumbleboy-reborn-linux64.zip godot4/build/tumbleboy-reborn-linux32.zip \
+     godot4/build/tumbleboy-reborn-linux-arm64.zip godot4/build/tumbleboy-reborn-macos.zip
+   ```
+   (los APKs de godot4 se suben renombrados con el prefijo `godot4-`, el que
+   usan los botones del blog.)
+8. **Actualizar el blog** (XO Galaxy): el post lee el changelog de
    `blog/xo-galaxy/releases.json` vía **jsDelivr** (los lectores no tocan la
    API de GitHub; si falla, el post cae a la API con ETag). Regenerar y subir:
    ```
    python3 tools/gen_releases_json.py
-   git add blog/xo-galaxy/releases.json && git commit -m "blog: releases.json tras v1.1.x" && git push origin main
+   git add blog/xo-galaxy/releases.json && git commit -m "blog: releases.json tras v1.x.y" && git push origin main
    ```
    jsDelivr refresca el archivo solo en ~12 h (`@main`); para forzarlo:
    `curl https://purge.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/releases.json`.

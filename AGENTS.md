@@ -14,15 +14,24 @@ conversaciones del proyecto van en **español**.
 
 ## Entorno y comandos
 
-- Motor: **Godot 3.6.2** (NO 4.x). En esta máquina se llama `godot3` (wrapper
-  que aísla la config con `XDG_CONFIG_HOME=~/.config/godot3-env`).
-- Jugar: `godot3 --path .` · controles táctiles: `godot3 --path . -- --force-touch`.
+- Dos motores, dos árboles:
+  - **Raíz**: **Godot 3.6.2** (NO 4.x), renderer GLES2, para Android legacy
+    (cajas GLES 2.0-only). En esta máquina se llama `godot3` (wrapper que
+    aísla la config con `XDG_CONFIG_HOME=~/.config/godot3-env`).
+  - **`godot4/`**: port a **Godot 4.7.1** (renderer Compatibility), usado para
+    Android moderno (targetSdk 36) y **escritorio (Windows/Linux/macOS)**. En
+    esta máquina se llama `godot`.
+- Jugar (raíz): `godot3 --path .` · controles táctiles: `godot3 --path . -- --force-touch`.
+  Jugar (port): `godot --path godot4`.
 - **Smoke test (el estándar antes de tocar nada):**
-  `godot3 --headless --path . res://scenes/SmokeTest.tscn`
+  - Raíz: `godot3 --headless --path . res://scenes/SmokeTest.tscn`
+  - Port: `godot --headless --path godot4 res://scenes/SmokeTest.tscn`
   Debe terminar en `SMOKE TEST: ALL PASS` (≈265 checks, exit 0). Se cuelga
   en `--headless` si algún test deja nodos vivos (ver "Gotchas").
-- Importar assets: `godot3 --headless --path . --import` (necesario la primera vez).
+- Importar assets: `godot3 --headless --path . --import` (raíz) o
+  `godot --headless --path godot4 --import` (port; necesario la primera vez).
 - Export APK y release: ver `docs/ANDROID.md` (¡y el gotcha de `--export` abajo!).
+  Export desktop: ver `docs/DESKTOP.md`.
 
 ## Arquitectura en 60 segundos
 
@@ -93,11 +102,13 @@ conversaciones del proyecto van en **español**.
 
 ## Publicar una release (resumen)
 
-Flujo completo en `docs/ANDROID.md` ("Release — checklist completa"). Resumen:
-bump de versión en `tools/setup_export_presets.py` → regenerar preset →
-exportar 3 APKs release → verificar (`aapt dump badging`, `apksigner`) →
-`git tag` + `gh release create` → regenerar/subir `releases.json` → purgar
-jsDelivr. Los APKs van como assets de la release; los botones del blog usan
+Flujo completo en `docs/ANDROID.md` ("Release — checklist completa") y
+`docs/DESKTOP.md`. Resumen: bump de versión en **ambos**
+`setup_export_presets.py` (raíz y `godot4/`, misma VERSION_CODE/NAME) →
+regenerar presets → exportar los 5 APKs (3 godot3 + 2 godot4) y los 6 zips de
+escritorio → verificar (`aapt`/`apksigner`, `file`, smoke) → `git tag` +
+`gh release create` → regenerar/subir `releases.json` → purgar jsDelivr. Los
+artefactos van como assets de la release; los botones del blog usan
 `releases/latest/download/` (sin versiones hardcodeadas).
 
 ## Documentación
