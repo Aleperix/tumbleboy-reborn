@@ -62,6 +62,8 @@
     .tbr-btn:hover{background:rgba(168,255,96,.14);border-color:var(--signal-dim,#6fbf3e);text-decoration:none}
     .tbr-btn small{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--mute,#7c8ba0)}
     .tbr-btn .tbr-btn-size{color:var(--mute,#7c8ba0)}
+    .tbr-btn-play{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:18px 16px;border-color:var(--orbit,#5ec8ff);background:rgba(94,200,255,.08);color:var(--orbit,#5ec8ff);font-size:16px;font-weight:700;text-decoration:none}
+    .tbr-btn-play:hover{background:rgba(94,200,255,.18);border-color:var(--orbit,#5ec8ff);color:var(--orbit,#5ec8ff);text-decoration:none}
     .tbr-src{margin:14px 0}
     .tbr-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:12px;color:var(--mute,#7c8ba0);margin:10px 0}
     .tbr-status button{font-family:var(--font-data,"JetBrains Mono"),monospace;font-size:11px;color:var(--ink,#e9eff6);background:var(--panel,#0f1723);border:1px solid var(--line,#1d2a3b);border-radius:6px;padding:6px 12px;cursor:pointer}
@@ -97,7 +99,7 @@
   </div>
 
   <div class="tbr-hero">
-    <p class="tbr-hero-sub">El clásico juego de la <b>XO</b> de Plan Ceibal, rehecho en Godot (3.6 + 4), listo para instalar en teléfonos, tablets y Android TV.</p>
+    <p class="tbr-hero-sub">El clásico juego de la <b>XO</b> de Plan Ceibal, rehecho en Godot (3.6 + 4), listo para instalar en teléfonos, tablets y Android TV, y para jugar en el navegador.</p>
   </div>
 
   <!-- CAPTURA 1: Pantalla principal del juego (21 niveles originales) -->
@@ -106,7 +108,7 @@
 
   <p>Tumble Boy es una actividad libre del ecosistema <b>Sugar Labs/OLPC</b>, nacida en un game jam para la XO en 2007 y popularizada en Uruguay con las laptops XO del Plan Ceibal. Esta versión <b>Reborn</b> lo rescata y lo amplía: <b>21 niveles originales</b> + editor de niveles visual + packs descargables, con tres zócalos de guardado para no perder nada.</p>
 
-  <p>Corre nativo en <b>Android</b> (teléfonos, tablets y <b>Android TV</b>) y en escritorio (<b>Windows</b>, <b>Linux</b> y <b>macOS</b>), en dos builds: <b>Godot 3.6 + GLES2</b> (retro, ligero incluso en hardware humilde, para cajas GLES 2.0-only) y <b>Godot 4 + Compatibility</b> (GLES3, targetSdk 36, para dispositivos modernos).</p>
+  <p>Corre nativo en <b>Android</b> (teléfonos, tablets y <b>Android TV</b>), en escritorio (<b>Windows</b>, <b>Linux</b> y <b>macOS</b>) y también <b>en el navegador</b> (HTML5), en dos builds: <b>Godot 3.6 + GLES2</b> (retro, ligero incluso en hardware humilde, para cajas GLES 2.0-only) y <b>Godot 4 + Compatibility</b> (GLES3, targetSdk 36, para dispositivos modernos).</p>
 
   <!-- CAPTURA 2: Editor de niveles con bloques pintados -->
   <img src="https://cdn.jsdelivr.net/gh/Aleperix/tumbleboy-reborn@main/blog/xo-galaxy/editor.png" alt="Editor de niveles visual de TumbleBoy Reborn">
@@ -122,9 +124,17 @@
   </ul>
 
   <h2>Descargar</h2>
-  <p>Elige el APK según tu dispositivo o el ZIP para tu sistema de escritorio. Los botones siempre funcionan; con conexión se actualizan solos con la información de GitHub (versión y tamaño).</p>
+  <p>¿Quieres probarlo sin instalar nada? <b>Juega en el navegador</b> o elige el APK según tu dispositivo o el ZIP para tu sistema de escritorio. Los botones siempre funcionan; con conexión se actualizan solos con la información de GitHub (versión y tamaño).</p>
 
   <div class="tbr-downloads" id="tbrDownloads">
+    <a class="tbr-btn tbr-btn-play" href="https://aleperix.github.io/tumbleboy-reborn/">
+      <span>&#9654; Jugar en el navegador</span>
+      <small>Versión web · Godot 4 · no requiere instalación</small>
+    </a>
+    <a class="tbr-btn" data-arch="web" data-ext="zip" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-web.zip">
+      <span>Web</span>
+      <small>HTML5 para tu propio servidor<br><span class="tbr-btn-size"></span></small>
+    </a>
     <a class="tbr-btn" data-arch="godot4-ARM64" href="https://github.com/Aleperix/tumbleboy-reborn/releases/latest/download/tumbleboy-reborn-godot4-ARM64.apk">
       <span>Godot 4 · ARM64</span>
       <small>Dispositivos modernos<br><span class="tbr-btn-size"></span></small>
@@ -187,6 +197,12 @@
     <li>Si ya tenías una versión anterior, la instalación <b>actualiza</b> sin borrar tus guardados.</li>
   </ol>
 
+  <h3>Navegador</h3>
+  <ol>
+    <li>Pulsa <b>&laquo;Jugar en el navegador&raquo;</b> arriba: no instalas nada y los guardados viven en la web.</li>
+    <li>La versión web también sirve para alojarla tú: descarga el ZIP <b>Web</b> y súbela a cualquier servidor estático (HTTPS).</li>
+  </ol>
+
   <h3>Escritorio (Windows, Linux, macOS)</h3>
   <ol>
     <li>Descarga el <b>ZIP</b> de tu sistema (64 bits salvo que tengas un equipo muy antiguo).</li>
@@ -212,7 +228,7 @@
   <div class="tbr-acc" id="tbrChangelog"></div>
 
   <div class="tbr-teaser">
-    <b>Estén atentos…</b> Pronto llegan <b>más plataformas</b>, y hay una <b>sorpresa</b> en camino para los fans de la XO. Si quieres aportar (niveles, packs, código), todo es bienvenido: <a href="https://github.com/Aleperix/tumbleboy-reborn">contribuye en GitHub</a>.
+    <b>Estén atentos…</b> Ahora con escritorio y navegador listos, el siguiente paso en el tablero es una <b>sorpresa</b> para los fans de la XO. Si quieres aportar (niveles, packs, código), todo es bienvenido: <a href="https://github.com/Aleperix/tumbleboy-reborn">contribuye en GitHub</a>.
   </div>
 
   <!-- CAPTURA 5: Android TV con el foco en un botón -->

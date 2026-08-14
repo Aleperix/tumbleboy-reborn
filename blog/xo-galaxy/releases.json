@@ -1,5 +1,73 @@
 [
   {
+    "tag_name": "v1.3.0",
+    "name": "v1.3.0 — ¡TumbleBoy Reborn llega a Windows, Linux, macOS y al navegador!",
+    "published_at": "2026-08-14T01:45:37Z",
+    "body": "## v1.3.0 — ¡TumbleBoy Reborn llega a Windows, Linux, macOS y al navegador!\n\nEsta release añade los **ports de escritorio** y la **versión web**, generados\ndesde el port a **Godot 4 + Compatibility**. Ahora puedes jugar en el\nordenador, en el navegador, además de en teléfonos y Android TV.\n\n### Novedades\n\n- **Jugar en el navegador (HTML5)**: <https://aleperix.github.io/tumbleboy-reborn/>\n  — sin instalar nada, servido desde GitHub Pages. El ZIP `tumbleboy-reborn-web.zip`\n  permite alojarla en cualquier servidor estático.\n- **6 builds de escritorio** (ZIP, un solo archivo con todo incluido):\n  - `tumbleboy-reborn-win64.zip` — Windows 64 bits\n  - `tumbleboy-reborn-win32.zip` — Windows 32 bits\n  - `tumbleboy-reborn-linux64.zip` — Linux x86_64\n  - `tumbleboy-reborn-linux32.zip` — Linux x86 antiguo\n  - `tumbleboy-reborn-linux-arm64.zip` — Linux ARM64 (Raspberry Pi, Chromebooks)\n  - `tumbleboy-reborn-macos.zip` — macOS (Intel y Apple Silicon)\n- **Controles de escritorio**: teclado/gamepad como en TV, y ratón como toque\n  directo. `--force-touch` sigue disponible para probar los controles táctiles.\n- **Guardados y packs compatibles**: el formato de guardado, los niveles y los\n  packs son idénticos entre los builds de Godot 3 y Godot 4 del mismo sistema.\n\n### Notas\n\n- **macOS**: al ser una app sin firmar (se exporta desde Linux), la primera vez\n  hay que hacer clic derecho sobre la app y pulsar **Abrir**.\n- La versión web usa el build de Godot 4 sin hilos (WebGL2), por lo que funciona\n  en GitHub Pages sin cabeceras especiales.\n- Los APKs siguen publicándose igual: 3 de godot3 (ARM64/ARM32/X86) + 2 de\n  godot4 (ARM64/X86_64), ahora en **versionCode 9 / versionName 1.3.0**.\n\n### Verificación\n\n- Smoke test del port Godot 4: **ALL PASS**.\n- Builds de escritorio verificados: Linux arranca en headless (exit 0), Windows\n  bajo Wine con drivers dummy, macOS binario universal, y los 5 APKs firmados\n  con el keystore de siempre (SHA-256 `d804317b…b35be12`).\n- Versión web verificada cargando en Firefox headless desde GitHub Pages (pck\n  con los 21 niveles, sin errores de consola).\n",
+    "assets": [
+      {
+        "name": "tumbleboy-reborn-ARM32.apk",
+        "size": 18419198,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-ARM32.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-ARM64.apk",
+        "size": 18114865,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-godot4-ARM64.apk",
+        "size": 78381183,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-godot4-ARM64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-godot4-X86_64.apk",
+        "size": 81295865,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-godot4-X86_64.apk"
+      },
+      {
+        "name": "tumbleboy-reborn-linux-arm64.zip",
+        "size": 31947459,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-linux-arm64.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-linux32.zip",
+        "size": 32948633,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-linux32.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-linux64.zip",
+        "size": 32419508,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-linux64.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-macos.zip",
+        "size": 64694740,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-macos.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-web.zip",
+        "size": 13368167,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-web.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-win32.zip",
+        "size": 43586437,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-win32.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-win64.zip",
+        "size": 42391972,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-win64.zip"
+      },
+      {
+        "name": "tumbleboy-reborn-X86.apk",
+        "size": 18792589,
+        "browser_download_url": "https://github.com/Aleperix/tumbleboy-reborn/releases/download/v1.3.0/tumbleboy-reborn-X86.apk"
+      }
+    ]
+  },
+  {
     "tag_name": "v1.2.0",
     "name": "v1.2.0 — port a Godot 4 (targetSdk 36) + release conjunta",
     "published_at": "2026-08-08T03:55:42Z",

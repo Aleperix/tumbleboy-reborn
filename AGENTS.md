@@ -22,7 +22,9 @@ conversaciones del proyecto van en **español**.
     Android moderno (targetSdk 36) y **escritorio (Windows/Linux/macOS)**. En
     esta máquina se llama `godot`.
 - Jugar (raíz): `godot3 --path .` · controles táctiles: `godot3 --path . -- --force-touch`.
-  Jugar (port): `godot --path godot4`.
+  Jugar (port): `godot --path godot4`. Jugar (web): `godot --headless --path godot4
+  --export-release "Web" build/web/tumbleboy-reborn.html` y servir `build/web/`
+  (deploy a GitHub Pages: `tools/update_gh_pages.sh`).
 - **Smoke test (el estándar antes de tocar nada):**
   - Raíz: `godot3 --headless --path . res://scenes/SmokeTest.tscn`
   - Port: `godot --headless --path godot4 res://scenes/SmokeTest.tscn`
@@ -102,13 +104,14 @@ conversaciones del proyecto van en **español**.
 
 ## Publicar una release (resumen)
 
-Flujo completo en `docs/ANDROID.md` ("Release — checklist completa") y
-`docs/DESKTOP.md`. Resumen: bump de versión en **ambos**
+Flujo completo en `docs/ANDROID.md` ("Release — checklist completa"),
+`docs/DESKTOP.md` y `docs/WEB.md`. Resumen: bump de versión en **ambos**
 `setup_export_presets.py` (raíz y `godot4/`, misma VERSION_CODE/NAME) →
-regenerar presets → exportar los 5 APKs (3 godot3 + 2 godot4) y los 6 zips de
-escritorio → verificar (`aapt`/`apksigner`, `file`, smoke) → `git tag` +
-`gh release create` → regenerar/subir `releases.json` → purgar jsDelivr. Los
-artefactos van como assets de la release; los botones del blog usan
+regenerar presets → exportar los 5 APKs (3 godot3 + 2 godot4), los 6 zips de
+escritorio y el zip web → verificar (`aapt`/`apksigner`, `file`, smoke) →
+`git tag` + `gh release create` → `tools/update_gh_pages.sh` para desplegar la
+versión web en GitHub Pages → regenerar/subir `releases.json` → purgar jsDelivr.
+Los artefactos van como assets de la release; los botones del blog usan
 `releases/latest/download/` (sin versiones hardcodeadas).
 
 ## Documentación

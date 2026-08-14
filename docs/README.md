@@ -13,6 +13,7 @@ proyectos.
 | [API.md](API.md) | Referencia técnica completa: autoloads, scripts, constantes, escenas, formatos, tests |
 | [ANDROID.md](ANDROID.md) | Cómo compilar el APK, minSdk/ABI, despliegue en caja/TV |
 | [DESKTOP.md](DESKTOP.md) | Builds de escritorio (Windows, Linux, macOS) desde el port Godot 4 |
+| [WEB.md](WEB.md) | Versión web HTML5 y despliegue en GitHub Pages |
 | [../packs/README.md](../packs/README.md) | Cómo funciona un pack, crearlos y aportarlos a la comunidad |
 
 ## El juego en una frase
@@ -45,6 +46,7 @@ MainMenu
 | minSdk | 21 (raíz) / 24 (port) | Mínimo nativo de Godot 3.6 / Godot 4 |
 | ABI | arm64-v8a + armeabi-v7a + x86 (raíz); arm64-v8a + x86_64 (port) | Cubre cajas Android baratas y teléfonos |
 | Escritorio | Windows/Linux/macOS desde el port Godot 4 (6 zips) | Templates ya instalados; ver [DESKTOP.md](DESKTOP.md) |
+| Web | HTML5 desde el port Godot 4, single-thread (sin COOP/COEP) | Funciona en GitHub Pages sin cabeceras custom; ver [WEB.md](WEB.md) |
 | Ventana base | 1200×825 (TumbleBoy 1100×825, offset 50 px) | Resolución nativa del original escalada |
 | Entrada | InputMap unificado + D-pad + táctil | Jugar igual en teléfono y TV |
 | Niveles | Formato `.txt` fiel + editor visual | El original los crea como texto sin editor |

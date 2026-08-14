@@ -328,11 +328,15 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
    ```
 5. **6 zips de escritorio** desde el port godot4 (ver `docs/DESKTOP.md`):
    `win64`, `win32`, `linux64`, `linux32`, `linux-arm64`, `macos`.
-6. **Verificar**: `aapt dump badging` (versionCode/versionName/banner) y
+6. **Zip web** desde el port godot4 (ver `docs/WEB.md`):
+   `godot --headless --path godot4 --export-release "Web" build/web/tumbleboy-reborn.html`
+   y `zip` de `godot4/build/web/` → `tumbleboy-reborn-web.zip`.
+7. **Verificar**: `aapt dump badging` (versionCode/versionName/banner) y
    `apksigner verify --print-certs` → SHA-256 `d804317b…b35be12`; en desktop,
    smoke del binario Linux (exit 0), `file` para las demás arquitecturas y el
-   pck con los niveles.
-7. **Publicar**:
+   pck con los niveles; en web, el pck con los niveles y página 200 sin errores
+   de consola en Firefox headless.
+8. **Publicar**:
    ```
    git add <cambios> && git commit -m "v1.x.y: ..." && git push origin main
    git tag v1.x.y && git push origin v1.x.y
@@ -341,11 +345,13 @@ Waydroid permite probar el launcher de TV sin caja. Flujo usado en v1.1.3:
      godot4/build/tumbleboy-reborn-godot4-ARM64.apk godot4/build/tumbleboy-reborn-godot4-X86_64.apk \
      godot4/build/tumbleboy-reborn-win64.zip godot4/build/tumbleboy-reborn-win32.zip \
      godot4/build/tumbleboy-reborn-linux64.zip godot4/build/tumbleboy-reborn-linux32.zip \
-     godot4/build/tumbleboy-reborn-linux-arm64.zip godot4/build/tumbleboy-reborn-macos.zip
+     godot4/build/tumbleboy-reborn-linux-arm64.zip godot4/build/tumbleboy-reborn-macos.zip \
+     godot4/build/tumbleboy-reborn-web.zip
    ```
    (los APKs de godot4 se suben renombrados con el prefijo `godot4-`, el que
-   usan los botones del blog.)
-8. **Actualizar el blog** (XO Galaxy): el post lee el changelog de
+   usan los botones del blog.) Tras publicar, desplegar la web en GitHub Pages:
+   `tools/update_gh_pages.sh` (crea/actualiza la rama `gh-pages`).
+9. **Actualizar el blog** (XO Galaxy): el post lee el changelog de
    `blog/xo-galaxy/releases.json` vía **jsDelivr** (los lectores no tocan la
    API de GitHub; si falla, el post cae a la API con ETag). Regenerar y subir:
    ```
