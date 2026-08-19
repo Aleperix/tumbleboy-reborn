@@ -95,12 +95,12 @@ body {
 	top: 12px;
 	right: 12px;
 	z-index: 10;
-	width: 40px;
-	height: 40px;
+	width: 36px;
+	height: 36px;
 	border-radius: 50%;
-	border: 1px solid rgba(255,255,255,0.2);
-	background: rgba(0,0,0,0.5);
-	color: #5ec8ff;
+	border: 1px solid rgba(255,255,255,0.15);
+	background: rgba(0,0,0,0.7);
+	color: rgba(255,255,255,0.8);
 	cursor: pointer;
 	display: flex;
 	align-items: center;
@@ -112,13 +112,13 @@ body {
 }
 
 #fs-btn:hover {
-	color: #a8ff60;
-	border-color: #a8ff60;
+	color: #5ec8ff;
+	border-color: #5ec8ff;
 }
 
 #fs-btn svg {
-	width: 20px;
-	height: 20px;
+	width: 18px;
+	height: 18px;
 	stroke: currentColor;
 	fill: none;
 	stroke-width: 2;
@@ -140,7 +140,8 @@ body {
 		</noscript>
 
 		<button id="fs-btn" aria-label="Fullscreen" title="Fullscreen">
-			<svg xmlns="http://www.w3.org/2000/svg"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+			<svg class="fs-enter" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+			<svg class="fs-exit" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
 		</button>
 
 		<div id="status">
@@ -264,6 +265,8 @@ const engine = new Engine(GODOT_CONFIG);
 (function () {
 	var fsBtn = document.getElementById('fs-btn');
 	if (!fsBtn) return;
+	var fsEnter = fsBtn.querySelector('.fs-enter');
+	var fsExit = fsBtn.querySelector('.fs-exit');
 
 	var fsTimeout;
 	function showFs() {
@@ -275,20 +278,27 @@ const engine = new Engine(GODOT_CONFIG);
 	document.addEventListener('touchstart', showFs);
 	showFs();
 
-	var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-		|| (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	function updateIcon() {
+		var isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
+		fsEnter.style.display = isFull ? 'none' : '';
+		fsExit.style.display = isFull ? '' : 'none';
+		fsBtn.setAttribute('aria-label', isFull ? 'Salir de pantalla completa' : 'Pantalla completa');
+	}
+
+	document.addEventListener('fullscreenchange', updateIcon);
+	document.addEventListener('webkitfullscreenchange', updateIcon);
 
 	fsBtn.addEventListener('click', function () {
-		if (isIOS) {
-			window.location.reload();
-			return;
+		var isFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
+		if (isFull) {
+			var exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+			if (exitFs) exitFs.call(document);
+		} else {
+			var el = document.documentElement;
+			var rfs = el.requestFullscreen || el.webkitRequestFullscreen
+				|| el.mozRequestFullScreen || el.msRequestFullscreen;
+			if (rfs) rfs.call(el);
 		}
-		var el = document.documentElement;
-		var rfs = el.requestFullscreen
-			|| el.webkitRequestFullscreen
-			|| el.mozRequestFullScreen
-			|| el.msRequestFullscreen;
-		if (rfs) rfs.call(el);
 	});
 })();
 		</script>
