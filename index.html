@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 		<title>TumbleBoy Reborn</title>
 		<style>
 html, body, #canvas {
@@ -89,6 +89,42 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+
+#fs-btn {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	z-index: 10;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	border: 1px solid rgba(255,255,255,0.2);
+	background: rgba(0,0,0,0.5);
+	color: #5ec8ff;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.4s ease, color 0.2s, border-color 0.2s;
+	-webkit-tap-highlight-color: transparent;
+	padding: 0;
+}
+
+#fs-btn:hover {
+	color: #a8ff60;
+	border-color: #a8ff60;
+}
+
+#fs-btn svg {
+	width: 20px;
+	height: 20px;
+	stroke: currentColor;
+	fill: none;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="tumbleboy-reborn.icon.png" />
 <link rel="apple-touch-icon" href="tumbleboy-reborn.apple-touch-icon.png"/>
@@ -103,6 +139,10 @@ body {
 			Your browser does not support JavaScript.
 		</noscript>
 
+		<button id="fs-btn" aria-label="Fullscreen" title="Fullscreen">
+			<svg xmlns="http://www.w3.org/2000/svg"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+		</button>
+
 		<div id="status">
 			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="tumbleboy-reborn.png" alt="">
 			<progress id="status-progress"></progress>
@@ -111,8 +151,13 @@ body {
 
 		<script src="tumbleboy-reborn.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"tumbleboy-reborn","experimentalVK":false,"fileSizes":{"tumbleboy-reborn.pck":3327892,"tumbleboy-reborn.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"tumbleboy-reborn","experimentalVK":false,"fileSizes":{"tumbleboy-reborn.pck":3353304,"tumbleboy-reborn.wasm":39513091},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
+
+if (navigator.maxTouchPoints > 0) {
+	GODOT_CONFIG.args = ["--force-touch"];
+}
+
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
@@ -214,6 +259,38 @@ const engine = new Engine(GODOT_CONFIG);
 		}, displayFailureNotice);
 	}
 }());
+		</script>
+		<script>
+(function () {
+	var fsBtn = document.getElementById('fs-btn');
+	if (!fsBtn) return;
+
+	var fsTimeout;
+	function showFs() {
+		fsBtn.style.opacity = '1';
+		clearTimeout(fsTimeout);
+		fsTimeout = setTimeout(function () { fsBtn.style.opacity = '0'; }, 3000);
+	}
+	document.addEventListener('mousemove', showFs);
+	document.addEventListener('touchstart', showFs);
+	showFs();
+
+	var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+		|| (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+	fsBtn.addEventListener('click', function () {
+		if (isIOS) {
+			window.location.reload();
+			return;
+		}
+		var el = document.documentElement;
+		var rfs = el.requestFullscreen
+			|| el.webkitRequestFullscreen
+			|| el.mozRequestFullScreen
+			|| el.msRequestFullscreen;
+		if (rfs) rfs.call(el);
+	});
+})();
 		</script>
 	</body>
 </html>
